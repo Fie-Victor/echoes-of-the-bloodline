@@ -61,3 +61,4 @@ canvas { display: block; }
 #hp-bar { background: linear-gradient(90deg, #8b0000, #e04030); }
 #ammo { width: 100%; color: #ccc; }
 #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(140,0,0,.85)); }
+@media (max-width: 1400px) { #battle-hud { top: 96px; left: 22px; right: auto; margin: 0; width: min(420px, 45vw); } }
