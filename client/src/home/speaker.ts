@@ -32,34 +32,6 @@ export class Speaker {
     this.queue = lines.map((text) => ({ id: this.nextId++, text, chunks: [], ended: false, ok: false, shown: false }));
     for (const l of this.queue) this.send({ type: "say", id: l.id, text: l.text });
 
-    // Offline / timeout fallback if WebSocket server doesn't respond
-    const fallbackTimer = window.setTimeout(() => {
-      let triggered = false;
-      for (const line of this.queue) {
-        if (!line.ended && line.chunks.length === 0) {
-          line.ended = true;
-          line.ok = false;
-          triggered = true;
-        }
-      }
-      if (triggered) {
-        this.pump();
-        // Optional local speech synthesis fallback
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          try {
-            const first = lines[0];
-            if (first) {
-              const u = new SpeechSynthesisUtterance(first);
-              u.lang = "fr-FR";
-              u.pitch = 1.2;
-              speechSynthesis.speak(u);
-            }
-          } catch {}
-        }
-      }
-    }, 750);
-    this.timers.push(fallbackTimer);
-
     return new Promise((resolve) => {
       this.finish = resolve;
     });

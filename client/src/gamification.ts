@@ -57,64 +57,64 @@ export class GamificationManager {
   achievements: Achievement[] = [
     {
       id: "first_contact",
-      title: "Premier Contact",
-      desc: "Établir le dialogue avec le fier Achille",
+      title: "First Contact",
+      desc: "Open a dialogue with proud Achilles",
       icon: "💬",
       rewardPoints: 100,
       unlocked: false,
     },
     {
       id: "hero_speech",
-      title: "Paroles d'Or",
-      desc: "Gagner le respect d'Achille (Confiance > 60%)",
+      title: "Golden Words",
+      desc: "Earn Achilles' respect (trust above 60%)",
       icon: "🏛️",
       rewardPoints: 200,
       unlocked: false,
     },
     {
       id: "first_strike",
-      title: "Premier Sang",
-      desc: "Porter un coup décisif à un guerrier troyen",
+      title: "First Blood",
+      desc: "Land a decisive blow on an enemy warrior",
       icon: "🗡️",
       rewardPoints: 150,
       unlocked: false,
     },
     {
       id: "dodge_master",
-      title: "Danseur de Guerre",
-      desc: "Réaliser 3 esquives parfaites consécutives",
+      title: "War Dancer",
+      desc: "Pull off 3 perfect dodges in a row",
       icon: "⚡",
       rewardPoints: 250,
       unlocked: false,
     },
     {
       id: "combo_king",
-      title: "Tempête Héroïque",
-      desc: "Atteindre un multiplicateur de combo x3",
+      title: "Heroic Storm",
+      desc: "Reach a x3 combo multiplier",
       icon: "🔥",
       rewardPoints: 300,
       unlocked: false,
     },
     {
       id: "war_charge",
-      title: "Au Cœur de la Mêlée",
-      desc: "Mener la charge avec Achille pour défendre les nefs",
+      title: "Into the Melee",
+      desc: "Lead the charge and hold the field",
       icon: "⚔️",
       rewardPoints: 350,
       unlocked: false,
     },
     {
       id: "puzzle_master",
-      title: "Maître du Sceau",
-      desc: "Résoudre l'énigme du verrou temporel d'Astra",
+      title: "Seal Master",
+      desc: "Solve Astra's temporal lock",
       icon: "🔓",
       rewardPoints: 500,
       unlocked: false,
     },
     {
       id: "savior_of_troy",
-      title: "Gardien de la Lignée",
-      desc: "Stabiliser le continuum à 100% et sauver la chronologie",
+      title: "Keeper of the Bloodline",
+      desc: "Stabilize the continuum at 100% and save the timeline",
       icon: "👑",
       rewardPoints: 1000,
       unlocked: false,
@@ -184,7 +184,7 @@ export class GamificationManager {
       <div class="game-hud-panel">
         <!-- Score & Multiplier -->
         <div class="score-card">
-          <div class="score-label">POINTS DE CONTINUUM</div>
+          <div class="score-label">CONTINUUM POINTS</div>
           <div class="score-value-row">
             <span class="score-icon">✦</span>
             <span id="score-counter" class="score-number">0</span>
@@ -197,15 +197,15 @@ export class GamificationManager {
 
         <!-- Lives / Chrono-Cœurs -->
         <div class="lives-card">
-          <div class="lives-label">CHRONO-CŒURS</div>
+          <div class="lives-label">CHRONO-HEARTS</div>
           <div id="lives-container" class="lives-row"></div>
         </div>
 
         <!-- Player Health / Temporal Integrity -->
         <div class="health-card">
           <div class="health-header">
-            <span class="health-title">INTÉGRITÉ CORPORELLE</span>
-            <span id="health-text" class="health-value">100 / 100 PV</span>
+            <span class="health-title">BODY INTEGRITY</span>
+            <span id="health-text" class="health-value">100 / 100 HP</span>
           </div>
           <div class="health-track">
             <div id="health-ghost" class="health-ghost"></div>
@@ -216,7 +216,7 @@ export class GamificationManager {
         <!-- Continuum Stability Gauge -->
         <div class="stability-card">
           <div class="stability-header">
-            <span class="stability-title">STABILITÉ DU CONTINUUM</span>
+            <span class="stability-title">CONTINUUM STABILITY</span>
             <span id="stability-text" class="stability-value">25%</span>
           </div>
           <div class="stability-track">
@@ -226,7 +226,7 @@ export class GamificationManager {
 
         <!-- Quick Help / Journal shortcut -->
         <div class="hud-footnote">
-          <span>[TAB] Journal & Succès</span> · <span>[B] Déclencher la Bataille</span>
+          <span>[TAB] Journal and achievements</span> · <span>[B] Start the battle</span>
         </div>
       </div>
 
@@ -237,22 +237,22 @@ export class GamificationManager {
       <div id="journal-modal" class="journal-modal hidden">
         <div class="journal-content">
           <div class="journal-header">
-            <h2>CHRONIQUE DE TROIE — ARCHIVES TEMPORELLES</h2>
+            <h2>FIELD JOURNAL — TEMPORAL ARCHIVES</h2>
             <button id="journal-close" class="journal-close">✕</button>
           </div>
           <div class="journal-body">
             <div class="journal-stats-col">
-              <h3>STATISTIQUES DE MISSION</h3>
-              <div class="journal-stat-row"><span>Score Total :</span><strong id="journal-stat-score">0 pts</strong></div>
-              <div class="journal-stat-row"><span>Rang Actuel :</span><strong id="journal-stat-rank" class="rank-badge">C</strong></div>
-              <div class="journal-stat-row"><span>Ennemis Vaincus :</span><strong id="journal-stat-kills">0</strong></div>
-              <div class="journal-stat-row"><span>Esquives Réussies :</span><strong id="journal-stat-dodges">0</strong></div>
-              <div class="journal-stat-row"><span>Coups Portés :</span><strong id="journal-stat-hits">0</strong></div>
-              <div class="journal-stat-row"><span>Dégâts Subis :</span><strong id="journal-stat-damage">0</strong></div>
-              <div class="journal-stat-row"><span>Stabilité Continuum :</span><strong id="journal-stat-stability">25%</strong></div>
+              <h3>MISSION STATS</h3>
+              <div class="journal-stat-row"><span>Total score:</span><strong id="journal-stat-score">0 pts</strong></div>
+              <div class="journal-stat-row"><span>Current rank:</span><strong id="journal-stat-rank" class="rank-badge">C</strong></div>
+              <div class="journal-stat-row"><span>Enemies defeated:</span><strong id="journal-stat-kills">0</strong></div>
+              <div class="journal-stat-row"><span>Dodges:</span><strong id="journal-stat-dodges">0</strong></div>
+              <div class="journal-stat-row"><span>Hits landed:</span><strong id="journal-stat-hits">0</strong></div>
+              <div class="journal-stat-row"><span>Damage taken:</span><strong id="journal-stat-damage">0</strong></div>
+              <div class="journal-stat-row"><span>Continuum stability:</span><strong id="journal-stat-stability">25%</strong></div>
             </div>
             <div class="journal-achievements-col">
-              <h3>SUCCÈS DÉBLOQUÉS</h3>
+              <h3>ACHIEVEMENTS</h3>
               <div id="journal-achievements-list" class="achievements-list"></div>
             </div>
           </div>
@@ -262,13 +262,13 @@ export class GamificationManager {
       <!-- Game Over Modal -->
       <div id="game-over-modal" class="game-over-modal hidden">
         <div class="game-over-box">
-          <div class="glitch-title" data-text="RUPTURE TEMPORELLE">RUPTURE DU CONTINUUM</div>
-          <p class="game-over-desc">Tous tes Chrono-Cœurs ont été anéantis. Le paradoxe s'est refermé sur toi.</p>
+          <div class="glitch-title" data-text="TEMPORAL RUPTURE">CONTINUUM COLLAPSE</div>
+          <p class="game-over-desc">All your chrono-hearts are gone. The paradox closed over you.</p>
           <div class="game-over-score-card">
-            <div>Score Atteint : <strong id="game-over-score">0 pts</strong></div>
-            <div>Ennemis Éliminés : <strong id="game-over-kills">0</strong></div>
+            <div>Score: <strong id="game-over-score">0 pts</strong></div>
+            <div>Enemies defeated: <strong id="game-over-kills">0</strong></div>
           </div>
-          <button id="btn-respawn" class="btn-respawn">↺ RÉINITIALISER LA BOUCLE TEMPORELLE</button>
+          <button id="btn-respawn" class="btn-respawn">↺ RESET THE TIME LOOP</button>
         </div>
       </div>
 
@@ -276,21 +276,21 @@ export class GamificationManager {
       <div id="victory-modal" class="victory-modal hidden">
         <div class="victory-box">
           <div class="victory-sigil">✦ ✦ ✦</div>
-          <h2 class="victory-title">CONTINUUM TEMPOREL RESTAURÉ</h2>
-          <p class="victory-sub">Achille a repoussé l'assaut troyen. La lignée est sauve.</p>
+          <h2 class="victory-title">TEMPORAL CONTINUUM RESTORED</h2>
+          <p class="victory-sub">The assault is broken. The bloodline holds.</p>
           <div class="victory-rank-display">
-            <span class="victory-rank-label">RANG DE MISSION</span>
+            <span class="victory-rank-label">MISSION RANK</span>
             <span id="victory-rank-letter" class="victory-rank-letter">S</span>
           </div>
           <div class="victory-details">
-            <div class="v-row"><span>Score Final :</span><strong id="victory-final-score">0 pts</strong></div>
-            <div class="v-row"><span>Bonus Vies Restantes :</span><strong id="victory-lives-bonus">+0 pts</strong></div>
-            <div class="v-row"><span>Bonus Maîtrise d'Armes :</span><strong id="victory-combat-bonus">+0 pts</strong></div>
+            <div class="v-row"><span>Final score:</span><strong id="victory-final-score">0 pts</strong></div>
+            <div class="v-row"><span>Lives bonus:</span><strong id="victory-lives-bonus">+0 pts</strong></div>
+            <div class="v-row"><span>Combat bonus:</span><strong id="victory-combat-bonus">+0 pts</strong></div>
           </div>
           <div class="victory-actions">
-            <button id="btn-next-era" class="btn-primary" style="display: none;">🌀 Sauter vers l'Époque Suivante</button>
-            <a href="index.html" class="btn-secondary">⏳ Retour à la Frise du Temps</a>
-            <button id="btn-keep-exploring" class="btn-tertiary">Explorer le champ de bataille</button>
+            <button id="btn-next-era" class="btn-primary" style="display: none;">🌀 Jump to the next era</button>
+            <a href="index.html" class="btn-secondary">⏳ Back to the timeline</a>
+            <button id="btn-keep-exploring" class="btn-tertiary">Stay on the battlefield</button>
           </div>
         </div>
       </div>
@@ -481,17 +481,17 @@ export class GamificationManager {
   }
 
   /** Award points and effects when an enemy is defeated */
-  registerKill(enemyName = "Guerrier troyen"): void {
+  registerKill(enemyName = "Enemy warrior"): void {
     this.stats.enemiesDefeated++;
     this.increaseCombo();
-    this.addPoints(250, `${enemyName} vaincu`, { color: "purple" });
+    this.addPoints(250, `${enemyName} defeated`, { color: "purple" });
     this.addStability(8);
   }
 
   /** Award points and effects when Achilles trust increases */
   registerTrustGain(amount: number): void {
     this.stats.trustGained += amount;
-    this.addPoints(amount * 12, `Confiance acquise (+${amount})`, { color: "green" });
+    this.addPoints(amount * 12, `Trust gained (+${amount})`, { color: "green" });
     this.unlockAchievement("first_contact");
     if (amount > 10) {
       this.unlockAchievement("hero_speech");
@@ -505,7 +505,7 @@ export class GamificationManager {
 
   /** Award points and effects when war breaks out */
   registerWarTriggered(): void {
-    this.addPoints(350, "Appel aux Armes de Troie", { color: "gold" });
+    this.addPoints(350, "Call to arms", { color: "gold" });
     this.unlockAchievement("war_charge");
     this.addStability(15);
   }
@@ -513,7 +513,7 @@ export class GamificationManager {
   /** Award points when temporal seal puzzle is solved */
   registerPuzzleSolved(): void {
     this.stats.puzzlesSolved++;
-    this.addPoints(500, "Sceau Temporel Stabilisé", { color: "purple" });
+    this.addPoints(500, "Temporal seal stabilized", { color: "purple" });
     this.unlockAchievement("puzzle_master");
     this.addStability(25);
   }
@@ -530,7 +530,7 @@ export class GamificationManager {
   }
 
   /** Inflict damage on player */
-  takeDamage(amount: number, reason = "Blessure de combat"): boolean {
+  takeDamage(amount: number, reason = "Combat wound"): boolean {
     if (this.invulnerableTimer > 0 || this.isGameOver) return false;
 
     this.hp = Math.max(0, this.hp - amount);
@@ -552,7 +552,7 @@ export class GamificationManager {
     const el = document.createElement("div");
     el.className = "floating-point-item red";
     el.innerHTML = `
-      <div class="fp-points">-${amount} <span class="fp-unit">PV</span></div>
+      <div class="fp-points">-${amount} <span class="fp-unit">HP</span></div>
       <div class="fp-label">${reason}</div>
     `;
     el.style.left = `${window.innerWidth * 0.5 + (Math.random() - 0.5) * 80}px`;
@@ -588,8 +588,8 @@ export class GamificationManager {
       const el = document.createElement("div");
       el.className = "floating-point-item red-big";
       el.innerHTML = `
-        <div class="fp-points">💔 -1 CHRONO-CŒUR !</div>
-        <div class="fp-label">RÉSONANCE TEMPORELLE ACTIVÉE (${this.lives} restantes)</div>
+        <div class="fp-points">💔 -1 CHRONO-HEART!</div>
+        <div class="fp-label">TEMPORAL RESONANCE ACTIVE (${this.lives} left)</div>
       `;
       el.style.left = `${window.innerWidth * 0.5}px`;
       el.style.top = `${window.innerHeight * 0.35}px`;
@@ -616,7 +616,7 @@ export class GamificationManager {
   private updateHealthBar(): void {
     const pct = Math.max(0, Math.min(100, (this.hp / this.maxHp) * 100));
     this.hpBarEl.style.width = `${pct}%`;
-    this.hpTextEl.textContent = `${this.hp} / ${this.maxHp} PV`;
+    this.hpTextEl.textContent = `${this.hp} / ${this.maxHp} HP`;
 
     // Ghost damage bar smoothly catches up
     setTimeout(() => {
@@ -642,7 +642,7 @@ export class GamificationManager {
     if (!ach || ach.unlocked) return;
 
     ach.unlocked = true;
-    this.addPoints(ach.rewardPoints, `Succès : ${ach.title}`, { color: "gold", sound: false });
+    this.addPoints(ach.rewardPoints, `Achievement: ${ach.title}`, { color: "gold", sound: false });
     playAchievementFanfare();
 
     // Show achievement toast
@@ -651,7 +651,7 @@ export class GamificationManager {
     toast.innerHTML = `
       <div class="toast-sigil">${ach.icon}</div>
       <div class="toast-body">
-        <div class="toast-category">🏆 SUCCÈS DÉBLOQUÉ</div>
+        <div class="toast-category">🏆 ACHIEVEMENT UNLOCKED</div>
         <div class="toast-title">${ach.title}</div>
         <div class="toast-desc">${ach.desc}</div>
         <div class="toast-reward">+${ach.rewardPoints} PTS</div>
@@ -673,12 +673,12 @@ export class GamificationManager {
     this.gameOverModalEl.classList.remove("hidden");
   }
 
-  setNextEraCallback(cb: () => void, nextTitle = "Époque Suivante"): void {
+  setNextEraCallback(cb: () => void, nextTitle = "Next era"): void {
     this.onNextEraCallback = cb;
     const btn = this.container.querySelector("#btn-next-era") as HTMLButtonElement | null;
     if (btn) {
       btn.style.display = "inline-flex";
-      btn.textContent = `🌀 Sauter vers ${nextTitle}`;
+      btn.textContent = `🌀 Jump to ${nextTitle}`;
     }
   }
 
@@ -708,7 +708,7 @@ export class GamificationManager {
     rankLetter.className = `victory-rank-letter rank-${rank.toLowerCase()}`;
 
     this.container.querySelector("#victory-final-score")!.textContent = `${this.score.toLocaleString()} pts`;
-    this.container.querySelector("#victory-lives-bonus")!.textContent = `+${livesBonus} pts (${this.lives} cœurs)`;
+    this.container.querySelector("#victory-lives-bonus")!.textContent = `+${livesBonus} pts (${this.lives} hearts)`;
     this.container.querySelector("#victory-combat-bonus")!.textContent = `+${combatBonus} pts`;
 
     this.victoryModalEl.classList.remove("hidden");

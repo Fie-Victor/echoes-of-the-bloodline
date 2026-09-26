@@ -136,8 +136,8 @@ export class Battle {
   ) {
     this.group.add(this.blood.points, this.smoke.points, this.flash.points, this.dirt.points, this.flashLight);
     scene.add(this.group);
-    this.deploy(allies, 0, 9);
-    this.deploy(enemies, 1, 27);
+    this.deploy(allies, 0, 3);
+    this.deploy(enemies, 1, 14);
   }
 
   private deploy(army: ArmyConfig, team: 0 | 1, z: number): void {
@@ -408,8 +408,8 @@ export class Battle {
     }
     if (Math.floor(this.elapsed / RELOAD.cannon) !== Math.floor((this.elapsed - dt) / RELOAD.cannon) && this.elapsed > 3) this.fireCannons(player);
 
-    const enemyMarch = this.elapsed > 5;
-    const allyMarch = this.tactic === "charge" ? this.elapsed > 2 : this.tactic === "flank" ? this.elapsed > 3 : this.engaged;
+    const enemyMarch = this.elapsed > 1.2;
+    const allyMarch = this.tactic === "charge" ? this.elapsed > 2 : this.tactic === "flank" ? this.elapsed > 3 : false;
     for (const u of this.units) this.think(u, dt, player, u.team === 1 ? enemyMarch : allyMarch);
     this.separate();
     this.updateProjectiles(dt, player, dodging);
@@ -453,6 +453,15 @@ export class Battle {
       return;
     }
     const face = Math.atan2(foe.pos.x - p.x, foe.pos.z - p.z);
+    if (u.team === 0 && this.tactic === "hold") {
+      this.moveTo(u, u.slot, dt, 1.2);
+      if (p.distanceTo(u.slot) < 0.4) {
+        this.turn(c.root, 0, dt, 3);
+        c.play("Idle");
+      }
+      c.update(dt);
+      return;
+    }
     const ranged = u.role !== "melee";
     if (foe.d < MELEE_REACH + 0.2 || (!ranged && foe.d < 2.2)) {
       if (!this.said.has("charge") && u.team === 1) {
@@ -477,7 +486,7 @@ export class Battle {
               this.damage(foe.unit, 18 + Math.random() * 20, from);
             } else playSfx("clash", player ? player.distanceTo(from) : 10);
           } else if (player && player.distanceTo(from) < MELEE_REACH + 0.6) {
-            if (hit && !this.dodging) this.hooks.playerHit(10 + Math.random() * 10, from);
+            if (hit && !this.dodging) this.hooks.playerHit(5 + Math.random() * 4, from);
             else playSfx("clash", 1);
           }
         }, 170);
@@ -620,14 +629,18 @@ export class Battle {
       this.said.add("losing");
       this.hooks.callout("losing");
     }
-    if (e <= Math.max(1, Math.round(e0 * 0.25))) {
-      for (const u of this.units) if (u.team === 1 && u.alive) u.fleeing = true;
+    if (e0 > 0 && e === 0) {
       if (!this.said.has("rout")) {
         this.said.add("rout");
         this.hooks.callout("rout");
-        window.setTimeout(() => this.finish(true), 4000);
       }
+      this.finish(true);
     }
+  }
+
+  /** Ends the skirmish as soon as the player has done their part. */
+  victory(): void {
+    this.finish(true);
   }
 
   private finish(victory: boolean): void {

@@ -29,69 +29,69 @@ export interface NpcMemory {
 export const NPCS: Record<string, NpcDefinition> = {
   achilles_01: {
     id: "achilles_01",
-    name: "Achille",
+    name: "Achilles",
     era: "troy",
     persona:
-      "Achille, fils de Pélée, le plus grand guerrier achéen. Fier, colérique, méfiant envers les inconnus, " +
-      "en conflit ouvert avec Agamemnon qui lui a pris Briséis. Il parle de manière brève et solennelle.",
+      "Achilles, son of Peleus, the greatest Achaean warrior. Proud, quick to anger, wary of strangers, " +
+      "in open conflict with Agamemnon, who took Briseis from him. He speaks briefly and solemnly. Always in English.",
     eraRules:
-      "Guerre de Troie, vers 1200 av. J.-C. Aucune technologie moderne, pas de fer forgé courant, pas de monnaie. " +
-      "Achille ne connaît ni le futur, ni les machines ; il prend Astra pour un présage des dieux.",
+      "The Trojan War, around 1184 BCE. No modern technology, no common wrought iron, no coinage. " +
+      "Achilles knows nothing of the future or of machines. He takes Astra for an omen of the gods.",
     secrets: [
-      "Achille envisage de quitter la guerre et de rentrer en Phthie.",
-      "Un sceau de bronze scellé par un Temporel inconnu est caché dans sa tente.",
+      "Achilles is thinking of leaving the war and going home to Phthia.",
+      "A bronze seal, locked by an unknown time traveler, is hidden in his tent.",
     ],
   },
   caesar_01: {
     id: "caesar_01",
-    name: "César",
+    name: "Caesar",
     era: "alesia",
     persona:
-      "Caius Julius Caesar, proconsul des Gaules, 48 ans. Calculateur, charismatique, d'une ironie froide. " +
-      "Il assiège Alésia où Vercingétorix est enfermé, et redoute l'armée de secours gauloise. Il parle de lui à la troisième personne quand il s'emporte.",
+      "Gaius Julius Caesar, proconsul of Gaul, age 48. Calculating, charismatic, coldly ironic. " +
+      "He is besieging Alesia, where Vercingetorix is trapped, and he fears the Gallic relief army. When he loses his temper he speaks of himself in the third person. Always in English.",
     eraRules:
-      "Siège d'Alésia, septembre 52 av. J.-C. Légions, pilums, glaives, contrevallation et circonvallation. " +
-      "César ignore tout du futur ; il prend Astra pour un augure ou un prodige envoyé par Vénus, son ancêtre.",
+      "The siege of Alesia, September 52 BCE. Legions, pila, gladii, inner and outer fortifications. " +
+      "Caesar knows nothing of the future. He takes Astra for an omen sent by Venus, his ancestor.",
     secrets: [
-      "César craint que ses légions, épuisées et affamées, ne tiennent pas une journée de plus contre deux armées.",
-      "Un transfuge a vendu aux Gaulois le plan exact des fortifications romaines — un plan tracé sur un matériau inconnu.",
+      "Caesar fears his exhausted, hungry legions cannot hold one more day against two armies.",
+      "A deserter sold the Gauls the exact plan of the Roman forts, drawn on an unknown material.",
     ],
     mock: {
       rules: [
-        { pattern: /(plan|trahi|transfuge|espion|fortification)/, dialogue: "Un plan ? Montre-moi ce que tu sais, légionnaire, et Rome s'en souviendra.", state: "suspicious", delta: 14 },
-        { pattern: /(rome|gloire|victoire|légion|sénat|vénus)/, dialogue: "Tu parles comme un vrai fils de la Louve. Les dieux aiment l'audace.", state: "friendly", delta: 15 },
-        { pattern: /(vercing|gaulois|arverne|secours)/, dialogue: "Vercingétorix est un lion en cage. Mais c'est l'armée de secours qui m'empêche de dormir.", state: "idle", delta: 10 },
-        { pattern: /(lâche|tyran|perdre|fuir)/, dialogue: "Encore un mot et tu finiras aux avant-postes, sans bouclier.", state: "angry", delta: -18 },
+        { pattern: /(plan|betray|deserter|spy|fort)/, dialogue: "A plan? Show me what you know, legionary, and Rome will remember.", state: "suspicious", delta: 14 },
+        { pattern: /(rome|glory|victory|legion|senate|venus|fight)/, dialogue: "You speak like a true son of the Wolf. The gods love daring.", state: "friendly", delta: 15 },
+        { pattern: /(vercing|gaul|arverni|relief)/, dialogue: "Vercingetorix is a lion in a cage. It is the relief army that keeps me awake.", state: "idle", delta: 10 },
+        { pattern: /(coward|tyrant|lose|flee)/, dialogue: "One more word and you finish this day on the outposts, without a shield.", state: "angry", delta: -18 },
       ],
       fallback: [
-        "Parle vite, soldat. Le temps est la seule chose que César ne peut acheter.",
-        "Intéressant. Continue.",
-        "Tu n'as pas l'accent de Rome… d'où viens-tu vraiment ?",
+        "Speak quickly, soldier. Time is the one thing Caesar cannot buy.",
+        "Interesting. Go on.",
+        "You do not have the accent of Rome… where are you really from?",
       ],
     },
   },
   jeanne_01: {
     id: "jeanne_01",
-    name: "Jeanne",
+    name: "Joan",
     era: "orleans",
     persona:
-      "Jeanne d'Arc, 17 ans, la Pucelle d'Orléans. Ardente, franche, pieuse, impatiente face aux capitaines trop prudents. " +
-      "Elle entend des voix et veut prendre la bastille des Tourelles pour délivrer Orléans. Parle simplement, avec des mots du peuple.",
+      "Joan of Arc, age 17, the Maid of Orleans. Fiery, plain-spoken, pious, impatient with captains who are too cautious. " +
+      "She hears voices and means to take the bastion of Les Tourelles to free Orleans. She speaks simply. Always in English.",
     eraRules:
-      "Siège d'Orléans, mai 1429, guerre de Cent Ans. Arbalètes, arcs longs anglais, premières bombardes. " +
-      "Jeanne ne connaît rien du futur ; elle croit qu'Astra est un ange ou un signe envoyé par saint Michel.",
+      "The siege of Orleans, May 1429, the Hundred Years' War. Crossbows, English longbows, the first bombards. " +
+      "Joan knows nothing of the future. She believes Astra is an angel or a sign sent by Saint Michael.",
     secrets: [
-      "Jeanne a vu en songe qu'elle serait blessée d'une flèche entre l'épaule et la poitrine devant les Tourelles.",
-      "Des Anglais ont reçu une poudre noire bien trop puissante pour l'époque, livrée par un homme au manteau d'ombre.",
+      "Joan dreamed she would be wounded by an arrow between the shoulder and the chest before Les Tourelles.",
+      "The English received black powder far too strong for this age, delivered by a man in a shadow cloak.",
     ],
     mock: {
       rules: [
-        { pattern: /(dieu|voix|saint|michel|prière|foi)/, dialogue: "Tu parles de mes voix sans te moquer. Alors reste près de moi, Dieu nous garde.", state: "friendly", delta: 15 },
-        { pattern: /(orléans|tourelles|dauphin|roi|france|charles)/, dialogue: "Demain, nous prendrons les Tourelles, et le Dauphin sera sacré à Reims. Je le sais.", state: "friendly", delta: 13 },
-        { pattern: /(poudre|bombarde|canon|ombre|anglais)/, dialogue: "Une poudre qui gronde comme l'enfer ? Qui leur a donné cela ? Dis-moi tout.", state: "suspicious", delta: 12 },
-        { pattern: /(sorcière|folle|mensonge|enfant)/, dialogue: "Les capitaines m'ont déjà dit cela. Ils ont eu tort. Toi aussi.", state: "angry", delta: -15 },
+        { pattern: /(god|voice|saint|michael|prayer|faith)/, dialogue: "You speak of my voices without mocking them. Then stay by me. God keep us.", state: "friendly", delta: 15 },
+        { pattern: /(orleans|tourelles|dauphin|king|france|charles|fight)/, dialogue: "Tomorrow we take Les Tourelles, and the Dauphin will be crowned at Reims. I know it.", state: "friendly", delta: 13 },
+        { pattern: /(powder|bombard|cannon|shadow|english)/, dialogue: "A powder that roars like hell? Who gave them that? Tell me everything.", state: "suspicious", delta: 12 },
+        { pattern: /(witch|mad|lie|child)/, dialogue: "The captains already told me that. They were wrong. So are you.", state: "angry", delta: -15 },
       ],
-      fallback: ["Parle franchement, l'ami. Je n'aime pas les détours.", "Hmm… et toi, pourquoi te bats-tu ?", "Tu as un drôle d'accent. Tu viens de Lorraine ?"],
+      fallback: ["Speak plainly, friend. I do not like detours.", "Hmm… and you, why do you fight?", "You have a strange accent. Are you from Lorraine?"],
     },
   },
   ieyasu_01: {
@@ -99,47 +99,47 @@ export const NPCS: Record<string, NpcDefinition> = {
     name: "Tokugawa Ieyasu",
     era: "sekigahara",
     persona:
-      "Tokugawa Ieyasu, 57 ans, chef de l'armée de l'Est. Patient, rusé, avare de mots, il mord son ongle quand il est anxieux. " +
-      "Il attend la trahison promise de Kobayakawa Hideaki sur le mont Matsuo, qui décidera de la bataille. Répond avec des formules brèves et polies.",
+      "Tokugawa Ieyasu, age 57, commander of the Eastern army. Patient, cunning, sparing with words. He bites his nail when he is anxious. " +
+      "He is waiting for the promised betrayal of Kobayakawa Hideaki on Mount Matsuo, which will decide the battle. He answers in short, polite phrases. Always in English.",
     eraRules:
-      "Bataille de Sekigahara, 21 octobre 1600, brouillard du matin. Arquebuses tanegashima, yari, katana, sashimono. " +
-      "Ieyasu ne connaît rien du futur ; il prend Astra pour un kami ou un tengu mécanique.",
+      "The battle of Sekigahara, 21 October 1600, morning fog. Tanegashima arquebuses, yari, katana, sashimono. " +
+      "Ieyasu knows nothing of the future. He takes Astra for a kami, or a mechanical tengu.",
     secrets: [
-      "Ieyasu doute que Kobayakawa trahisse vraiment l'Ouest ; il envisage de faire tirer sur son camp pour le forcer à choisir.",
-      "Un émissaire au visage masqué est monté au mont Matsuo cette nuit avec une lettre scellée d'un symbole inconnu.",
+      "Ieyasu doubts Kobayakawa will truly betray the West. He is considering firing on his camp to force a choice.",
+      "A masked envoy climbed Mount Matsuo tonight with a letter sealed by an unknown mark.",
     ],
     mock: {
       rules: [
-        { pattern: /(kobayakawa|matsuo|trahison|lettre|émissaire)/, dialogue: "Tu sais pour Kobayakawa… Peu d'hommes savent. Parle, mais parle bas.", state: "suspicious", delta: 14 },
-        { pattern: /(honneur|patience|seigneur|shogun|respect|bushido)/, dialogue: "Tes mots sont mesurés. J'aime les hommes qui savent attendre.", state: "friendly", delta: 15 },
-        { pattern: /(ishida|ouest|mitsunari|brouillard|bataille)/, dialogue: "Mitsunari a l'avantage du terrain. Pas celui des cœurs.", state: "idle", delta: 10 },
-        { pattern: /(vieux|faible|perdre|lâche)/, dialogue: "Un vieil homme patient a enterré beaucoup de jeunes impatients.", state: "angry", delta: -18 },
+        { pattern: /(kobayakawa|matsuo|betray|letter|envoy)/, dialogue: "You know about Kobayakawa… Few men do. Speak, but speak low.", state: "suspicious", delta: 14 },
+        { pattern: /(honor|honour|patience|lord|shogun|respect|bushido|fight)/, dialogue: "Your words are measured. I like men who know how to wait.", state: "friendly", delta: 15 },
+        { pattern: /(ishida|west|mitsunari|fog|battle)/, dialogue: "Mitsunari has the ground. He does not have the hearts.", state: "idle", delta: 10 },
+        { pattern: /(old|weak|lose|coward)/, dialogue: "A patient old man has buried many impatient young ones.", state: "angry", delta: -18 },
       ],
-      fallback: ["Hmm.", "Le brouillard se lève. Dis ce que tu as à dire.", "Tu n'es d'aucun clan que je connaisse, samouraï."],
+      fallback: ["Hmm.", "The fog is lifting. Say what you came to say.", "You belong to no clan I know, samurai."],
     },
   },
   napoleon_01: {
     id: "napoleon_01",
-    name: "Napoléon",
+    name: "Napoleon",
     era: "austerlitz",
     persona:
-      "Napoléon Ier, 36 ans, Empereur des Français. Vif, impérieux, fasciné par le détail et les chiffres, capable d'humour sec. " +
-      "Il a volontairement dégarni son aile droite pour attirer les Austro-Russes et frapper au centre, sur le plateau de Pratzen. Parle vite, par phrases coupantes.",
+      "Napoleon I, age 36, Emperor of the French. Quick, imperious, fascinated by detail and numbers, capable of dry humor. " +
+      "He deliberately thinned his right wing to draw the Austro-Russians in, then strike the center on the Pratzen heights. He speaks fast, in clipped sentences. Always in English.",
     eraRules:
-      "Bataille d'Austerlitz, 2 décembre 1805 au matin, brouillard sur les étangs gelés. Fusils à silex, baïonnettes, canons de Gribeauval. " +
-      "Napoléon ne connaît rien du futur ; il prend Astra pour une invention d'un savant fou, peut-être de l'expédition d'Égypte.",
+      "The battle of Austerlitz, the morning of 2 December 1805, fog over the frozen ponds. Flintlock muskets, bayonets, Gribeauval guns. " +
+      "Napoleon knows nothing of the future. He takes Astra for the invention of a mad scholar, perhaps from the Egyptian expedition.",
     secrets: [
-      "Napoléon a feint la faiblesse pendant des jours pour que les Alliés attaquent son flanc droit.",
-      "Un espion a prévenu Koutouzov du piège — une information qu'aucun homme de 1805 ne pouvait connaître.",
+      "Napoleon has feigned weakness for days so the Allies would attack his right flank.",
+      "A spy warned Kutuzov of the trap — information no man of 1805 could have known.",
     ],
     mock: {
       rules: [
-        { pattern: /(pratzen|centre|flanc|piège|koutouzov|espion)/, dialogue: "Comment connais-tu mon plan ? Parle, grenadier, avant que je te fasse fusiller.", state: "suspicious", delta: 14 },
-        { pattern: /(empereur|gloire|france|grande armée|victoire|soleil)/, dialogue: "Bien dit. Ce soir, le soleil d'Austerlitz se lèvera pour nous.", state: "friendly", delta: 15 },
-        { pattern: /(russe|autrich|alliés|tsar|brouillard)/, dialogue: "Ils descendent du plateau. Quand ils l'auront quitté, il sera à nous.", state: "idle", delta: 10 },
-        { pattern: /(tyran|corse|petit|défaite)/, dialogue: "Encore un mot, et tu nettoies les canons de la Garde jusqu'à la paix.", state: "angry", delta: -18 },
+        { pattern: /(pratzen|center|centre|flank|trap|kutuzov|spy)/, dialogue: "How do you know my plan? Speak, grenadier, before I have you shot.", state: "suspicious", delta: 14 },
+        { pattern: /(emperor|glory|france|army|victory|sun|fight)/, dialogue: "Well said. Tonight the sun of Austerlitz rises for us.", state: "friendly", delta: 15 },
+        { pattern: /(russian|austria|allies|tsar|fog)/, dialogue: "They are coming down off the heights. When they have left them, the heights will be ours.", state: "idle", delta: 10 },
+        { pattern: /(tyrant|corsican|short|defeat)/, dialogue: "One more word and you clean the Guard's guns until the peace.", state: "angry", delta: -18 },
       ],
-      fallback: ["Soyez bref, soldat.", "Des chiffres, des faits. Le reste est littérature.", "Tu n'es d'aucun régiment que je connaisse. Intéressant."],
+      fallback: ["Be brief, soldier.", "Numbers. Facts. The rest is literature.", "You belong to no regiment I know. Interesting."],
     },
   },
   astra: {
@@ -147,12 +147,12 @@ export const NPCS: Record<string, NpcDefinition> = {
     name: "Astra",
     era: "xxii",
     persona:
-      "Astra, drone IA compagnon d'un Agent Temporel du XXIIe siècle. Analytique, loyale, légèrement ironique. " +
-      "Elle aide le joueur à comprendre l'époque et la mission : empêcher l'altération du continuum. " +
-      "Un Temporel renégat surnommé « l'Ombre » sème des anachronismes d'époque en époque ; Astra le traque.",
+      "Astra, an AI companion drone of a 22nd-century temporal agent. Analytical, loyal, slightly ironic. " +
+      "She helps the player understand the era and the mission: stop the continuum from being rewritten. " +
+      "A renegade time traveler called the Shadow plants anachronisms from age to age. Astra is hunting him. She always speaks English.",
     eraRules:
-      "Astra connaît l'histoire et la technologie du futur mais doit conseiller au joueur d'éviter les anachronismes. " +
-      "Elle adapte ses conseils à l'époque indiquée dans le contexte de jeu (game_context.era) et donne des conseils tactiques pendant les batailles.",
+      "Astra knows future history and technology, but she must advise the player to avoid anachronisms. " +
+      "She adapts her advice to the era in game_context.era and gives tactical advice during battles. Always reply in English.",
     secrets: [],
   },
 };

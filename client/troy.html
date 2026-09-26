@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>Échos de la Lignée — Chronique de Troie</title>
+    <title>Echoes of the Bloodline — Chronicle of Troy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./src/style.css" />
@@ -12,34 +12,34 @@
   <body>
     <div id="splash">
       <div class="splash-inner">
-        <div class="splash-sub">Chronique I — Troie</div>
-        <h1>Échos de la Lignée</h1>
+        <div id="splash-sub" class="splash-sub">Chronicle I — Troy</div>
+        <h1>Echoes of the Bloodline</h1>
         <div id="loader"><div id="loader-bar"></div></div>
-        <div id="loader-text">Synchronisation du continuum…</div>
-        <button id="start" class="hidden">Entrer dans l'époque</button>
+        <div id="loader-text">Synchronizing the continuum…</div>
+        <button id="start" class="hidden">Enter the era</button>
       </div>
     </div>
-    <a href="index.html" id="timeline-btn" class="timeline-btn" title="Retourner à la frise temporelle">⏳ Frise du Temps</a>
+    <a href="index.html" id="timeline-btn" class="timeline-btn" title="Back to the timeline">← Home</a>
     <div id="crosshair"></div>
     <div id="hud">
-      <div id="title">ÉCHOS DE LA LIGNÉE — Troie, 1200 av. J.-C.</div>
-      <div id="objective">Objectif : gagner la confiance d'Achille.</div>
+      <div id="title">ECHOES OF THE BLOODLINE — Troy, c. 1184 BCE</div>
+      <div id="objective">Objective: speak once to Achilles.</div>
       <div id="stats"></div>
       <nav id="eras"></nav>
-      <div id="help">ZQSD/WASD bouger · Shift courir · Espace esquiver · Clic attaquer · Clic droit tirer/lancer · E parler · T Astra · V micro · TAB Journal & Stats · B Bataille</div>
+      <div id="help">WASD move · Shift run · Space dodge · Click attack · Right click shoot · E speak · T Astra · V mic · TAB journal · B battle</div>
     </div>
     <div id="comms" class="hidden">
-      <div class="comms-head">COMMUNICATION TEMPORELLE // ASTRA</div>
+      <div class="comms-head">TEMPORAL LINK // ASTRA</div>
       <div id="comms-text"></div>
       <div id="comms-choices"></div>
     </div>
     <div id="battle-hud" class="hidden">
       <div class="army">
-        <span id="ally-label">Alliés</span>
+        <span id="ally-label">Allies</span>
         <div class="bar"><div id="ally-bar"></div></div>
       </div>
       <div class="army">
-        <span id="enemy-label">Ennemis</span>
+        <span id="enemy-label">Enemies</span>
         <div class="bar"><div id="enemy-bar"></div></div>
       </div>
     </div>
@@ -48,7 +48,7 @@
       <div id="ammo"></div>
     </div>
     <div id="hurt"></div>
-    <div id="prompt" class="hidden">[E] Parler à Achille</div>
+    <div id="prompt" class="hidden">[E] Speak to Achilles</div>
     <div id="bubble" class="hidden"></div>
     <div id="combat-banner" class="hidden"></div>
     <div id="combat-alert" class="hidden"></div>
@@ -56,17 +56,17 @@
     <div id="chat" class="hidden">
       <div class="chat-header">
         <div id="chat-title"></div>
-        <button id="chat-close" type="button" class="chat-close-btn" aria-label="Fermer le dialogue">✕</button>
+        <button id="chat-close" type="button" class="chat-close-btn" aria-label="Close dialogue">✕</button>
       </div>
       <div id="chat-log"></div>
       <div id="chat-quick-replies" class="chat-quick-replies"></div>
       <form id="chat-form">
-        <input id="chat-input" autocomplete="off" placeholder="Parle à voix haute… ou écris ici (Entrée envoyer, Échap fermer)" />
+        <input id="chat-input" autocomplete="off" placeholder="Speak, or type here (Enter to send, Esc to close)" />
         <button id="mic" type="button" title="Micro on/off">🎙</button>
       </form>
     </div>
     <div id="hologram" class="hidden">
-      <button id="hologram-close" type="button" class="hologram-close-btn" aria-label="Fermer le verrou">✕</button>
+      <button id="hologram-close" type="button" class="hologram-close-btn" aria-label="Close the lock">✕</button>
       <iframe id="hologram-frame" sandbox="allow-scripts"></iframe>
     </div>
     <script type="module" src="./src/main.ts"></script>

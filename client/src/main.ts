@@ -10,10 +10,10 @@ import { ERA_ORDER, type EraId, isEraId, nextEra } from "../../shared/eras.ts";
 import type { NpcResponse, NpcState, ServerMessage } from "../../shared/protocol.ts";
 import { loadGltf, loadTexture, manager } from "./assets.ts";
 import { Battle, type Callout, type Missile } from "./battle.ts";
-import { CLIP_SPEED, Character, dressAsAgent, dressAsHoplite, loadHumanSkin, makeAspis, makeSpear } from "./characters.ts";
+import { CLIP_SPEED, Character, dressAsHoplite, loadHumanSkin, makeAspis, makeSpear } from "./characters.ts";
 import { Drone } from "./drone.ts";
 import { CLIFF_EDGE_Z, buildWorld, terrainHeight } from "./environment.ts";
-import { type AstraBeat, ERAS, type Squad, type Tactic } from "./eras.ts";
+import { type ArmyConfig, type AstraBeat, ERAS, type Squad, type Tactic } from "./eras.ts";
 import { GamificationManager } from "./gamification.ts";
 import { GameSocket } from "./net.ts";
 import { dressKit } from "./outfits.ts";
@@ -23,8 +23,6 @@ import { Microphone, VoicePlayer, audioListener, resumeAudio, speakLocal } from 
 
 const THINKING_FALLBACK_MS = 2000;
 const TALK_RANGE = 4.0;
-const WAR_TRUST = 70;
-const WAR_EXCHANGES = 6;
 const PLAYER_HP = 100;
 
 const eraParam = new URLSearchParams(location.search).get("era");
@@ -35,14 +33,14 @@ const NPC_NAMES: Record<string, string> = { [LEADER]: era.leader.name, astra: "A
 
 /** Ranged attack configuration per era (pilum, javelot, arquebuse, mousquet) */
 const PLAYER_RANGED: Record<EraId, { kind: Missile | "musket"; reload: number; ammo: number; label: string }> = {
-  troy: { kind: "javelin", reload: 1.6, ammo: 5, label: "Javelot achéen" },
-  alesia: { kind: "javelin", reload: 1.5, ammo: 4, label: "Pilum romain" },
-  orleans: { kind: "javelin", reload: 1.8, ammo: 4, label: "Dague de jet" },
-  sekigahara: { kind: "musket", reload: 4.2, ammo: 10, label: "Arquebuse Tanegashima" },
-  austerlitz: { kind: "musket", reload: 3.8, ammo: 14, label: "Fusil Charleville" },
+  troy: { kind: "javelin", reload: 1.6, ammo: 5, label: "Achaean javelin" },
+  alesia: { kind: "javelin", reload: 1.5, ammo: 4, label: "Roman pilum" },
+  orleans: { kind: "javelin", reload: 1.8, ammo: 4, label: "Throwing dagger" },
+  sekigahara: { kind: "musket", reload: 4.2, ammo: 10, label: "Tanegashima arquebus" },
+  austerlitz: { kind: "musket", reload: 3.8, ammo: 14, label: "Charleville musket" },
 };
 
-const STATE_LABELS: Record<NpcState, string> = { idle: "Neutre", friendly: "Amical", suspicious: "Méfiant", angry: "Hostile" };
+const STATE_LABELS: Record<NpcState, string> = { idle: "Neutral", friendly: "Friendly", suspicious: "Wary", angry: "Hostile" };
 const STATE_COLORS: Record<NpcState, number> = { idle: 0xd9b36c, friendly: 0x4fdc7a, suspicious: 0xf0a020, angry: 0xff3322 };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -80,9 +78,11 @@ const ui = {
   hurt: $("hurt"),
 };
 
-ui.title.textContent = `ÉCHOS DE LA LIGNÉE — ${era.title}`;
-ui.splashSub.textContent = era.chapter;
-ui.objective.textContent = era.objectives.meet;
+if (ui.title) ui.title.textContent = `ECHOES OF THE BLOODLINE — ${era.title}`;
+document.title = `Echoes of the Bloodline — ${era.chapter}`;
+if (ui.splashSub) ui.splashSub.textContent = era.chapter;
+if (ui.prompt) ui.prompt.textContent = `[E] Speak to ${era.leader.name}`;
+if (ui.objective) ui.objective.textContent = era.objectives.meet;
 
 // Top era navigation links
 if (ui.eras) {
@@ -145,6 +145,7 @@ const game = {
   thinking: false,
   phase: "intro" as Phase,
   exchanges: 0,
+  playerKills: 0,
   tactic: "hold" as Tactic,
   hp: PLAYER_HP,
   ammo: PLAYER_RANGED[eraId].ammo,
@@ -154,7 +155,7 @@ const game = {
 
 function refreshStats(): void {
   if (ui.stats) {
-    ui.stats.textContent = `${era.leader.name} — confiance ${game.trust[LEADER]}/100 · ${STATE_LABELS[game.leaderState]}`;
+    ui.stats.textContent = `${era.leader.name} — trust ${game.trust[LEADER]}/100 · ${STATE_LABELS[game.leaderState]}`;
   }
 }
 refreshStats();
@@ -172,12 +173,18 @@ async function init() {
 
   const player = new Character(agentGltf, agentSkin);
   if (troy) {
-    dressAsAgent(player, 0x33d6ff);
+    dressAsHoplite(player);
     const hand = player.bone("R_Hand").getWorldPosition(new THREE.Vector3());
-    const spear = makeSpear(0x33d6ff, false);
+    const spear = makeSpear(0xc4a060, false);
     spear.position.set(hand.x, hand.y + 0.25, hand.z + 0.03);
     spear.rotation.x = 0.12;
     player.attachTo("R_Hand", spear);
+    const fore = player.bone("L_Forearm").getWorldPosition(new THREE.Vector3());
+    const lhand = player.bone("L_Hand").getWorldPosition(new THREE.Vector3());
+    const shield = makeAspis(aspisFace);
+    shield.position.lerpVectors(fore, lhand, 0.5).add(new THREE.Vector3(0.16, -0.05, 0.06));
+    shield.rotation.set(0, 0.35, 0);
+    player.attachTo("L_Forearm", shield);
   } else {
     dressKit(player, era.player.outfit, { weapon: era.player.weapon, team: era.allies?.team });
   }
@@ -293,12 +300,13 @@ async function init() {
     else if (msg.type === "transcript") {
       if (!msg.final) subtitle(`🎙 ${msg.text}`, 0, true);
       else if (msg.text) {
-        logLine("player", `Toi : ${msg.text}`);
-        subtitle(`Toi : ${msg.text}`, 2500);
-      } else subtitle("🎙 (rien entendu)", 1500);
+        rememberLine(msg.text);
+        logLine("player", `You: ${msg.text}`);
+        subtitle(`You: ${msg.text}`, 2500);
+      } else subtitle("🎙 I didn't catch that. Hold V and speak close to the mic.", 3200);
     }
     else if (msg.type === "hologram") showHologram(msg.html);
-    else if (msg.type === "error") logLine("sys", `Erreur : ${msg.message}`);
+    else if (msg.type === "error") logLine("sys", `Error: ${msg.message}`);
   }
 
   function handleReply(npcId: string, res: NpcResponse, source: string): void {
@@ -318,10 +326,9 @@ async function init() {
       (aura.material as THREE.MeshBasicMaterial).color.setHex(STATE_COLORS[res.npc_state]);
       refreshStats();
       game.exchanges++;
-
-      const isBattleCall = res.dialogue.toLowerCase().match(/combat|guerre|bataille|charge|attaqu|armes/);
-      if (game.phase === "meet" && (res.new_trust >= WAR_TRUST || game.exchanges >= WAR_EXCHANGES || isBattleCall)) {
-        window.setTimeout(callToWar, 3500 + res.dialogue.length * 40);
+      if (game.phase === "meet") {
+        closeChat();
+        window.setTimeout(callToWar, 900);
       }
     }
   }
@@ -332,9 +339,27 @@ async function init() {
     npc_trust: game.trust[npcId] ?? 100,
   });
 
+  const saidLines = new Set<string>();
+  const normLine = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").trim();
+
+  function forgetSaidHints(): void {
+    for (const btn of [...ui.commsChoices.querySelectorAll("button")]) {
+      const label = (btn.textContent ?? "").replace(/^\d+\.\s*/, "");
+      if (saidLines.has(normLine(label))) btn.remove();
+    }
+  }
+
+  function rememberLine(text: string): void {
+    const key = normLine(text);
+    if (!key || key === "continue" || key === "continuer") return;
+    saidLines.add(key);
+    forgetSaidHints();
+  }
+
   function talk(npcId: string, text: string): void {
     interrupt();
-    logLine("player", `Toi : ${text}`);
+    rememberLine(text);
+    logLine("player", `You: ${text}`);
     socket.send({ type: "talk", request: { npc_id: npcId, player_input: text, game_context: gameContext(npcId) } });
     armThinking(npcId);
   }
@@ -362,11 +387,11 @@ async function init() {
   async function listen(mode: "vad" | "ptt"): Promise<void> {
     try {
       await mic.listen(mode);
-      if (mode === "vad") subtitle(`🎙 ${NPC_NAMES[voiceTarget()]} t'écoute — parle librement`, 3000, true);
+      if (mode === "vad") subtitle(`🎙 ${NPC_NAMES[voiceTarget()]} is listening — speak freely`, 3000, true);
     } catch (e) {
       const reason = e instanceof Error ? `${e.name === "Error" ? "" : `${e.name} : `}${e.message}` : String(e);
-      subtitle(`Micro indisponible (${reason})`, 6000);
-      logLine("sys", `Micro indisponible : ${reason}`);
+      subtitle(`Microphone unavailable (${reason})`, 6000);
+      logLine("sys", `Microphone unavailable: ${reason}`);
     }
   }
 
@@ -374,7 +399,7 @@ async function init() {
     clearTimeout(game.pendingTimer);
     game.pendingTimer = window.setTimeout(() => {
       game.thinking = npcId === LEADER;
-      ui.bubble.textContent = npcId === "astra" ? "Calcul en cours…" : "Hmm… laisse-moi réfléchir…";
+      ui.bubble.textContent = npcId === "astra" ? "Calculating…" : "Hmm… let me think…";
       ui.bubble.classList.remove("hidden");
     }, THINKING_FALLBACK_MS);
   }
@@ -404,7 +429,6 @@ async function init() {
     void mic.stop();
     ui.chat.classList.add("hidden");
     ui.chatInput.blur();
-    renderer.domElement.requestPointerLock();
   }
 
   ui.chatForm.addEventListener("submit", (e) => {
@@ -440,9 +464,9 @@ async function init() {
     socket.send({ type: "puzzle_solved", puzzle_id: data.puzzle_id });
     ui.hologram.classList.add("hidden");
     gamification.registerPuzzleSolved();
-    ui.objective.textContent = "Continuum stabilisé — brèche temporelle active.";
-    logLine("sys", "Astra : Verrou ouvert. Brèche temporelle stabilisée. Traverse le portail pour continuer l'épopée !");
-    say("astra", "Verrou ouvert. Brèche temporelle stabilisée. Traverse le portail pour continuer l'épopée !");
+    ui.objective.textContent = "Continuum stable — the temporal rift is open.";
+    logLine("sys", "Astra: Lock open. The rift is stable. Step through the portal and continue the chronicle.");
+    say("astra", "Lock open. The rift is stable. Step through the portal and continue the chronicle.");
     openPortal();
   });
 
@@ -469,12 +493,12 @@ async function init() {
     const prompt = document.createElement("div");
     prompt.className = "portal-prompt";
     const next = nextEra(eraId);
-    const nextName = next ? ERAS[next].chapter.replace(/^Chronique [IVX]+ — /, "") : "Écran Titre";
+    const nextName = next ? ERAS[next].chapter.replace(/^Chronicle [IVX]+ — /, "") : "Title screen";
     prompt.innerHTML = `
-      <div class="portal-prompt-text">🌀 Brèche Temporelle Ouverte !</div>
+      <div class="portal-prompt-text">🌀 Temporal rift open!</div>
       <div class="portal-actions">
-        <button id="prompt-jump" class="portal-btn portal-btn-jump">Sauter vers ${nextName}</button>
-        <button id="prompt-timeline" class="portal-btn portal-btn-timeline">Frise du Temps</button>
+        <button id="prompt-jump" class="portal-btn portal-btn-jump">Jump to ${nextName}</button>
+        <button id="prompt-timeline" class="portal-btn portal-btn-timeline">Home</button>
       </div>
     `;
     document.body.appendChild(prompt);
@@ -490,7 +514,7 @@ async function init() {
     }
     portal = null;
     ui.splash.classList.remove("fade");
-    ui.loaderText.textContent = "Saut quantique à travers le continuum…";
+    ui.loaderText.textContent = "Quantum jump across the continuum…";
     window.setTimeout(() => (location.search = `?era=${next}`), 900);
   }
 
@@ -499,8 +523,8 @@ async function init() {
   let commsPick: ((i: number) => void) | null = null;
 
   function astraLine(text: string): void {
-    logLine("sys", `Astra : ${text}`);
-    subtitle(`Astra : ${text}`, 3500 + text.length * 55);
+    logLine("sys", `Astra: ${text}`);
+    subtitle(`Astra: ${text}`, 3500 + text.length * 55);
     say("astra", text);
   }
 
@@ -513,26 +537,64 @@ async function init() {
       done();
       return;
     }
+    const choices = (beat.choices ?? [{ label: "Continue", reply: "" }]).filter((c) => !saidLines.has(normLine(c.label)));
+    if (!choices.length) {
+      runBeats(rest, done, pick);
+      return;
+    }
     ui.comms.classList.remove("hidden");
     ui.commsText.textContent = beat.text;
     astraLine(beat.text);
     ui.commsChoices.replaceChildren();
-    const choices = beat.choices ?? [{ label: "Continuer", reply: "" }];
     const choose = (i: number) => {
       const c = choices[i];
       if (!c) return;
       commsPick = null;
-      logLine("player", `Toi : ${c.label}`);
+      rememberLine(c.label);
+      logLine("player", `You: ${c.label}`);
       if (c.tactic && pick) pick(c.tactic);
       if (!c.reply) return runBeats(rest, done, pick);
       ui.commsText.textContent = c.reply;
       astraLine(c.reply);
-      ui.commsChoices.replaceChildren(button("Continuer", 1, () => runBeats(rest, done, pick)));
+      ui.commsChoices.replaceChildren();
       commsDone = () => runBeats(rest, done, pick);
+      window.setTimeout(() => runBeats(rest, done, pick), Math.min(4200, 1600 + c.reply.length * 35));
     };
     choices.forEach((c, i) => ui.commsChoices.append(button(c.label, i + 1, () => choose(i))));
     commsPick = choose;
     commsDone = null;
+  }
+
+  function storyLines(beats: AstraBeat[]): string[] {
+    const lines: string[] = [];
+    for (const beat of beats) {
+      lines.push(beat.text);
+      for (const choice of beat.choices ?? []) {
+        if (choice.reply && !lines.includes(choice.reply)) lines.push(choice.reply);
+      }
+    }
+    return lines;
+  }
+
+  /** Astra tells the chapter. Lines already heard are skipped, and no reply stays on screen. */
+  function narrate(lines: string[], done: () => void): void {
+    const pending = lines.filter((line) => !saidLines.has(normLine(line)));
+    const step = (i: number) => {
+      const line = pending[i];
+      if (!line) {
+        ui.comms.classList.add("hidden");
+        ui.commsChoices.replaceChildren();
+        done();
+        return;
+      }
+      rememberLine(line);
+      ui.comms.classList.remove("hidden");
+      ui.commsText.textContent = line;
+      ui.commsChoices.replaceChildren();
+      astraLine(line);
+      window.setTimeout(() => step(i + 1), Math.min(6500, 1800 + line.length * 32));
+    };
+    step(0);
   }
 
   function button(label: string, key: number, onClick: () => void): HTMLButtonElement {
@@ -560,31 +622,43 @@ async function init() {
     if (game.phase !== "meet") return;
     game.phase = "prebattle";
     closeChat();
+    ui.comms.classList.add("hidden");
     logLine("npc", `${era.leader.name} : ${era.warCall}`);
-    subtitle(`${era.leader.name} : ${era.warCall}`, 5500);
+    subtitle(`${era.leader.name} : ${era.warCall}`, 2800);
     say(LEADER, era.warCall);
     playSfx(eraId === "sekigahara" ? "drum" : "horn", 30);
     window.setTimeout(() => {
-      ui.objective.textContent = era.objectives.battle;
-      runBeats([era.briefing], startBattle, (t) => (game.tactic = t));
-    }, 4500);
+      ui.objective.textContent = "Objective: cut down 3 enemies. Astra has your back.";
+      astraLine("Three opponents ahead. I have you covered. Strike, dodge, and the rift will open.");
+      startBattle();
+    }, 1400);
+  }
+
+  const KILLS_TO_PASS = 3;
+
+  function skirmishOf(army: ArmyConfig, count: number, hp: number): ArmyConfig {
+    const base = army.squads.find((s) => s.role === "melee") ?? army.squads[0];
+    return base ? { ...army, squads: [{ ...base, count, role: "melee", hp }] } : army;
   }
 
   function startBattle(): void {
     if (!era.allies || !era.enemies) return;
     game.phase = "battle";
+    game.playerKills = 0;
     game.hp = PLAYER_HP;
     gamification.hp = PLAYER_HP;
     game.warnedHp = false;
     game.ammo = PLAYER_RANGED[eraId].ammo;
     battle?.dispose();
+    const allies = skirmishOf(era.allies, 3, 140);
+    const enemies = skirmishOf(era.enemies, KILLS_TO_PASS, 32);
 
     const p = player.root.position;
     p.set(0, 0, 7);
     p.y = terrainHeight(p.x, p.z);
     camYaw = 0;
 
-    battle = new Battle(scene, era.allies, era.enemies, game.tactic, {
+    battle = new Battle(scene, allies, enemies, "hold", {
       spawn: spawnSoldier,
       callout: (kind: Callout) => {
         const line = era.callouts[kind];
@@ -593,11 +667,19 @@ async function init() {
       playerHit: onPlayerHit,
       shake: (a) => (shake = Math.max(shake, a)),
       onEnemyKilled: (killer) => {
-        if (killer === "player") {
-          gamification.addPoints(150, "Ennemi Terrassé !");
-          gamification.registerAttackHit();
-        } else {
-          gamification.addPoints(40, "Troupe Ennemie Battue");
+        if (killer !== "player") {
+          gamification.addPoints(40, "Enemy trooper down");
+          return;
+        }
+        game.playerKills++;
+        gamification.addPoints(150, "Enemy down!");
+        gamification.registerAttackHit();
+        const left = KILLS_TO_PASS - game.playerKills;
+        if (left === 2) astraLine("One down. Two to go. I am right behind you.");
+        else if (left === 1) astraLine("Good. One more, and I open the rift.");
+        else if (left <= 0) {
+          astraLine("Done. The rift is stabilizing.");
+          battle?.victory();
         }
       },
       onPlayerStrikeHit: () => {
@@ -607,15 +689,18 @@ async function init() {
         if (!victory) return;
         game.phase = "after";
         ui.battleHud.classList.add("hidden");
-        ui.objective.textContent = era.objectives.after;
+        ui.objective.textContent = "Step into the rift, or go back home.";
 
-        gamification.addPoints(1000, "Bataille Historique Remportée !", { color: "gold" });
+        gamification.addPoints(1000, "Historical battle won!", { color: "gold" });
         gamification.addStability(35);
 
-        runBeats(era.debrief, () => {
-          openPortal();
-          gamification.showVictory(era.objectives.after);
-        });
+        narrate(
+          storyLines(era.debrief),
+          () => {
+            openPortal();
+            astraLine("The rift is open. Step through to the next age, or go back home.");
+          },
+        );
       },
     });
 
@@ -651,9 +736,9 @@ async function init() {
 
     if (game.hp <= 0) {
       game.phase = "prebattle";
-      astraLine("Tu es tombé au combat. Je stabilise le continuum de quelques instants… Reste avec tes frères d'armes !");
+      astraLine("You fell in the fight. I am holding the continuum for a moment… Stay with your brothers in arms!");
       ui.splash.classList.remove("fade");
-      ui.loaderText.textContent = "Rembobinage temporel…";
+      ui.loaderText.textContent = "Rewinding time…";
       window.setTimeout(() => {
         ui.splash.classList.add("fade");
         startBattle();
@@ -668,7 +753,7 @@ async function init() {
     ui.enemyBar.style.width = `${(c.enemies / Math.max(1, c.enemiesMax)) * 100}%`;
     ui.hpBar.style.width = `${game.hp}%`;
     const r = PLAYER_RANGED[eraId];
-    ui.ammo.textContent = r ? `${r.label} : ${game.ammo}${game.reload > 0 ? " (recharge…)" : ""}` : "";
+    ui.ammo.textContent = r ? `${r.label}: ${game.ammo}${game.reload > 0 ? " (reloading…)" : ""}` : "";
   }
 
   function playerMelee(): void {
@@ -725,7 +810,6 @@ async function init() {
   let camYaw = Math.PI;
   let camPitch = 0.12;
   let dodgeTime = 0;
-  const locked = () => document.pointerLockElement === renderer.domElement;
 
   const GAME_KEYS = new Set(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyB"]);
   const clearKeys = () => Object.keys(keys).forEach((k) => (keys[k] = false));
@@ -742,9 +826,9 @@ async function init() {
       e.preventDefault();
     } else if (e.code === "Enter" && commsKey(1)) {
       e.preventDefault();
-    } else if (e.code === "KeyE" && canTalkToLeader()) {
+    } else if (e.code === "KeyE" && game.phase === "meet" && canTalkToLeader()) {
       e.preventDefault();
-      openChat(LEADER);
+      talk(LEADER, "I stand with you. Let us fight.");
     } else if (e.code === "KeyT") {
       e.preventDefault();
       openChat("astra");
@@ -766,15 +850,22 @@ async function init() {
     if (e.code === "KeyV" && mic.listening) void (game.talkingTo ? listen("vad") : mic.stop());
   });
 
-  let dragging = false;
-  addEventListener("mouseup", () => (dragging = false));
+  let mouseButtons = 0;
+  const releasePointer = () => {
+    mouseButtons = 0;
+    if (document.pointerLockElement) document.exitPointerLock();
+  };
+  addEventListener("mouseup", (e) => {
+    mouseButtons &= ~(1 << e.button);
+  });
+  addEventListener("blur", releasePointer);
+  document.addEventListener("pointerlockchange", () => {
+    if (!document.pointerLockElement) mouseButtons = 0;
+  });
   renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
   renderer.domElement.addEventListener("mousedown", (e) => {
     if (game.talkingTo) return;
-    if (!locked()) {
-      dragging = true;
-      renderer.domElement.requestPointerLock();
-    }
+    mouseButtons |= 1 << e.button;
     if (e.button === 0) playerMelee();
     if (e.button === 2) playerRanged();
   });
@@ -784,9 +875,9 @@ async function init() {
   }
 
   addEventListener("mousemove", (e) => {
-    if (!locked() && !dragging) return;
-    camYaw -= e.movementX * 0.0025;
-    camPitch = THREE.MathUtils.clamp(camPitch + e.movementY * 0.002, -0.35, 0.9);
+    if (mouseButtons === 0) return;
+    camYaw -= e.movementX * 0.004;
+    camPitch = THREE.MathUtils.clamp(camPitch + e.movementY * 0.003, -0.35, 0.9);
   });
 
   addEventListener("resize", () => {
@@ -921,17 +1012,21 @@ async function init() {
   renderer.compile(scene, camera);
   update(0.016, 0);
 
-  ui.loaderText.textContent = "Époque synchronisée.";
+  ui.loaderText.textContent = "Era synchronized.";
   ui.start.classList.remove("hidden");
   ui.start.addEventListener("click", () => {
     ui.splash.classList.add("fade");
     resumeAudio();
-    renderer.domElement.requestPointerLock();
+    ui.objective.textContent = "Listen to Astra. Then one line to the leader.";
 
-    runBeats(era.intro, () => {
-      game.phase = "meet";
-      ui.objective.textContent = era.objectives.meet;
-    });
+    narrate(
+      storyLines(era.intro),
+      () => {
+        game.phase = "meet";
+        ui.objective.textContent = `Speak once to ${era.leader.name} (press E). The fight follows.`;
+        astraLine(`Go to ${era.leader.name}. One sentence is enough, and we go to battle.`);
+      },
+    );
   });
 
   const maxRatio = renderer.getPixelRatio();
@@ -964,5 +1059,5 @@ async function init() {
 
 init().catch((err) => {
   console.error(err);
-  ui.loaderText.textContent = `Erreur de chargement : ${(err as Error).message}`;
+  ui.loaderText.textContent = `Load error: ${(err as Error).message}`;
 });

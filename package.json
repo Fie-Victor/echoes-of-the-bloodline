@@ -8,8 +8,8 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite",
     "build": "vite build",
-    "build:itch": "vite build",
-    "package:itch": "vite build && node scripts/package-itch.js",
+    "build:itch": "vite build --mode itch",
+    "package:itch": "vite build --mode itch && node scripts/package-itch.js",
     "start": "tsx server/index.ts",
     "typecheck": "tsc --noEmit"
   },

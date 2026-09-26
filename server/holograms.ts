@@ -5,8 +5,8 @@ const PUZZLE_LOCK_HTML = `<!doctype html>
   p { margin:0 0 6px; font-size:12px; opacity:.8; }
   canvas { cursor:pointer; }
 </style></head><body>
-<h2>VERROU TEMPOREL</h2>
-<p>Clique sur les anneaux pour aligner les trois brèches vers le haut.</p>
+<h2>TEMPORAL LOCK</h2>
+<p>Click the rings to line the three gaps up.</p>
 <canvas id="c" width="260" height="260"></canvas>
 <script>
   window.gameAPI = window.gameAPI || {

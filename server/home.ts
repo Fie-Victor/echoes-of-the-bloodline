@@ -42,7 +42,7 @@ export function handleHomeSocket(socket: WebSocket): void {
       case "listen_start":
         listener?.close();
         if (!gradiumEnabled()) {
-          send({ type: "error", message: "Reconnaissance vocale indisponible (clé Gradium absente)." });
+          send({ type: "error", message: "Speech recognition unavailable (Gradium key missing)." });
           break;
         }
         listener = new CommandListener(

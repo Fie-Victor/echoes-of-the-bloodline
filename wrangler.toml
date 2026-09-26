@@ -1,0 +1,10 @@
+name = "echoes-bloodline"
+account_id = "46d80f9613baffd8a4f17d2ad9ffd624"
+main = "worker/index.ts"
+compatibility_date = "2026-03-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"

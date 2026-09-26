@@ -9,8 +9,8 @@ const PUZZLE_LOCK_HTML = `<!doctype html>
   p { margin:0 0 6px; font-size:12px; opacity:.85; }
   canvas { cursor:pointer; touch-action:none; }
 </style></head><body>
-<h2>VERROU TEMPOREL</h2>
-<p>Touche les anneaux pour aligner les trois brèches vers le haut.</p>
+<h2>TEMPORAL LOCK</h2>
+<p>Touch the rings to line the three gaps up.</p>
 <canvas id="c" width="260" height="260"></canvas>
 <script>
   window.gameAPI = window.gameAPI || {
@@ -66,8 +66,12 @@ export class GameSocket {
   constructor(private onMessage: Handler) {
     const params = new URLSearchParams(window.location.search);
     const customServer = params.get("server") || params.get("ws");
+    // VITE_WS_BASE n'est défini que pour les builds hébergés sans backend (itch.io).
+    const base = import.meta.env.VITE_WS_BASE as string | undefined;
     if (customServer) {
       this.serverUrl = customServer;
+    } else if (base) {
+      this.serverUrl = `${base.replace(/\/$/, "")}/ws`;
     } else {
       const proto = location.protocol === "https:" ? "wss" : "ws";
       this.serverUrl = `${proto}://${location.host}/ws`;
@@ -76,17 +80,12 @@ export class GameSocket {
   }
 
   private connect(): void {
-    // If not local host and no custom server explicitly given, don't stall forever on itch.io CDN
-    const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-    const hasCustomServer = new URLSearchParams(window.location.search).has("server");
-
     try {
       const ws = new WebSocket(this.serverUrl);
+      // Au-delà du délai (démarrage à froid du backend inclus), on bascule en simulation locale.
       const connTimeout = window.setTimeout(() => {
-        if (ws.readyState !== WebSocket.OPEN) {
-          this.activateOfflineMode();
-        }
-      }, isLocal || hasCustomServer ? 2500 : 1200);
+        if (ws.readyState !== WebSocket.OPEN) this.activateOfflineMode();
+      }, 8000);
 
       ws.onopen = () => {
         clearTimeout(connTimeout);
@@ -169,25 +168,25 @@ export class GameSocket {
     let response: NpcResponse;
 
     if (npcId === "astra") {
-      if (/(combat|guerre|bataille|achille|aide|stratégie|plan)/i.test(lower)) {
+      if (/(fight|battle|war|achilles|help|plan)/i.test(lower)) {
         response = {
-          dialogue: "Achille est un colosse fier et blessé dans son honneur. Propose-lui de charger ensemble pour sauver les vaisseaux : sa soif de gloire immortelle fera le reste !",
+          dialogue: "Achilles is a proud giant, wounded in his honor. Offer to charge with him and save the ships. His hunger for immortal glory will do the rest.",
           npc_state: "friendly",
           new_trust: 100,
           trigger_devin_ui: null,
           trigger_war: false,
         };
-      } else if (/(faille|époque|anachronisme|temps|mission|continuum)/i.test(lower)) {
+      } else if (/(rift|era|anachronism|time|mission|continuum)/i.test(lower)) {
         response = {
-          dialogue: "Agent, nous sommes en 1184 av. J.-C. devant Troie. Les navires achéens risquent de brûler. Empêche la chronologie de sombrer !",
+          dialogue: "Agent, it is 1184 BCE, before Troy. The Achaean ships may burn. Do not let the timeline collapse.",
           npc_state: "friendly",
           new_trust: 100,
           trigger_devin_ui: null,
           trigger_war: false,
         };
-      } else if (/(verrou|tente|sceau|relique)/i.test(lower)) {
+      } else if (/(lock|tent|seal|relic)/i.test(lower)) {
         response = {
-          dialogue: "Le verrou temporel de la tente d'Achille résonne avec notre drone. Gagne sa confiance pour l'examiner de près.",
+          dialogue: "The temporal lock in Achilles' tent resonates with our drone. Earn his trust so we can examine it.",
           npc_state: "friendly",
           new_trust: 100,
           trigger_devin_ui: null,
@@ -195,7 +194,7 @@ export class GameSocket {
         };
       } else {
         response = {
-          dialogue: "Agent, je surveille les mouvements ennemis. Achille hésite encore près du feu : parle-lui de bravoure et propose ton aide !",
+          dialogue: "Agent, I am watching the enemy. Achilles is still hesitating by the fire. Speak to him of courage, and offer your help.",
           npc_state: "friendly",
           new_trust: 100,
           trigger_devin_ui: null,
@@ -207,13 +206,13 @@ export class GameSocket {
       const curTrust = this.trustLevels.achilles_01 ?? 45;
 
       if (
-        /(combat|guerre|bataille|charge|lance|arme|navire|vaisseau|troyen|gloire|aide|allons|mort|ennemi)/i.test(lower) ||
+        /(fight|battle|war|charge|spear|weapon|ship|trojan|glory|help|enemy|stand with you)/i.test(lower) ||
         curTrust >= 75
       ) {
         this.achillesState = "friendly";
         this.trustLevels.achilles_01 = Math.min(100, curTrust + 20);
         response = {
-          dialogue: "Par les dieux ! Ta voix porte le feu du courage ! Les Troyens ne brûleront pas nos nefs ! Prends ta lance, étranger : SUIS-MOI AU COMBAT !",
+          dialogue: "By the gods! Your voice carries the fire of courage! The Trojans will not burn our ships! Take your spear, stranger: FOLLOW ME TO BATTLE!",
           npc_state: "friendly",
           new_trust: this.trustLevels.achilles_01,
           trigger_devin_ui: null,
@@ -223,37 +222,37 @@ export class GameSocket {
         this.achillesState = "suspicious";
         this.trustLevels.achilles_01 = Math.min(100, curTrust + 10);
         response = {
-          dialogue: "Ce roi sans honneur a bafoué mon nom. Mais si les vaisseaux brûlent, tous nos hommes périront. Tu as du cran d'évoquer cette querelle.",
+          dialogue: "That king without honor spat on my name. But if the ships burn, every man of ours dies. You have nerve, to raise that quarrel.",
           npc_state: "suspicious",
           new_trust: this.trustLevels.achilles_01,
           trigger_devin_ui: null,
           trigger_war: false,
         };
-      } else if (/(respect|honneur|héros|vaillance|force|légende|bravoure)/i.test(lower)) {
+      } else if (/(respect|honor|honour|hero|valor|strength|legend|courage)/i.test(lower)) {
         this.achillesState = "friendly";
         this.trustLevels.achilles_01 = Math.min(100, curTrust + 15);
         response = {
-          dialogue: "Tu parles en homme de valeur. Mon bras démange d'écraser les insolents qui menacent notre camp.",
+          dialogue: "You speak like a man of worth. My arm itches to crush the insolent men threatening our camp.",
           npc_state: "friendly",
           new_trust: this.trustLevels.achilles_01,
           trigger_devin_ui: null,
           trigger_war: false,
         };
-      } else if (/(sceau|tente|verrou|mystère|relique|artefact)/i.test(lower) && curTrust >= 55) {
+      } else if (/(seal|tent|lock|mystery|relic|artifact)/i.test(lower) && curTrust >= 55) {
         this.achillesState = "friendly";
         this.trustLevels.achilles_01 = Math.min(100, curTrust + 5);
         response = {
-          dialogue: "Un étrange artefact de bronze luit dans ma tente. Si tu combats à mes côtés, je te laisserai l'examiner.",
+          dialogue: "A strange bronze artifact glows in my tent. Fight beside me, and I will let you examine it.",
           npc_state: "friendly",
           new_trust: this.trustLevels.achilles_01,
           trigger_devin_ui: "generate_puzzle_lock",
           trigger_war: false,
         };
-      } else if (/(lâche|peur|faible|traître|idiot|fuis)/i.test(lower)) {
+      } else if (/(coward|afraid|weak|traitor|fool|flee)/i.test(lower)) {
         this.achillesState = "angry";
         this.trustLevels.achilles_01 = Math.max(10, curTrust - 25);
         response = {
-          dialogue: "Ose répéter cela et ma javeline transpercera ta gorge avant que le soleil ne décline !",
+          dialogue: "Say that again and my javelin will pierce your throat before the sun goes down!",
           npc_state: "angry",
           new_trust: this.trustLevels.achilles_01,
           trigger_devin_ui: null,
@@ -262,7 +261,7 @@ export class GameSocket {
       } else {
         this.achillesState = "idle";
         response = {
-          dialogue: "Je suis Achille. Si tu cherches un lâche, va voir Agamemnon. Si tu cherches la gloire et l'acier, parle franchement.",
+          dialogue: "I am Achilles. If you want a coward, go to Agamemnon. If you want glory and steel, speak plainly.",
           npc_state: "idle",
           new_trust: curTrust,
           trigger_devin_ui: null,
@@ -304,7 +303,7 @@ export class GameSocket {
     if (!SpeechRecognition) {
       this.onMessage({
         type: "transcript",
-        text: "(Reconnaissance vocale non supportée sur ce navigateur, utilisez le clavier ou les choix rapides)",
+        text: "(Speech recognition is not supported in this browser. Use the keyboard.)",
         final: true,
       });
       return;
@@ -313,7 +312,7 @@ export class GameSocket {
     try {
       this.offlineSpeechRec?.abort();
       const rec = new SpeechRecognition();
-      rec.lang = "fr-FR";
+      rec.lang = "en-US";
       rec.continuous = false;
       rec.interimResults = true;
 
@@ -336,13 +335,13 @@ export class GameSocket {
       };
 
       rec.onerror = () => {
-        this.onMessage({ type: "transcript", text: "(Micro inaudible)", final: true });
+        this.onMessage({ type: "transcript", text: "(Microphone inaudible)", final: true });
       };
 
       this.offlineSpeechRec = rec;
       rec.start();
     } catch {
-      this.onMessage({ type: "transcript", text: "(Accès micro indisponible)", final: true });
+      this.onMessage({ type: "transcript", text: "(Microphone unavailable)", final: true });
     }
   }
 

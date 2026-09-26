@@ -9,19 +9,19 @@ import { CommandParser, commandKeywords, echoWords, type VoiceCommand } from "./
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const INTRO = [
-  "Bienvenue, voyageur. Je suis Astra, ton drone de lignée.",
-  "Le temps s'est fracturé. À chaque époque, un conflit menace de réécrire l'histoire de tes ancêtres.",
-  "Ta mission : traverser les siècles, parler aux grandes figures du passé, gagner leur confiance et apaiser ces conflits avant que ta lignée ne s'efface.",
-  "Devant toi s'étend la frise du temps. Fais défiler les époques avec la molette, ou dis simplement : gauche, ou droite.",
-  "Quand une époque t'appelle, clique sur sa carte, ou dis : entrer dans cette époque.",
+  "Welcome, traveler. I am Astra, your bloodline drone.",
+  "Time has fractured. In every age, a conflict threatens to rewrite the history of your ancestors.",
+  "Your mission: cross the centuries, speak to the great figures of the past, earn their trust, and settle those conflicts before your bloodline fades.",
+  "The timeline is in front of you. Scroll through the eras, or simply say: left, or right.",
+  "When an era calls to you, click its card, or say: enter.",
 ];
 
 const MIC_ERRORS: Record<MicError, string> = {
-  denied: "Micro refusé — autorise-le dans la barre d'adresse",
-  "no-device": "Aucun micro détecté",
-  insecure: "Micro indisponible (page non sécurisée, utilise https)",
-  unsupported: "Micro non pris en charge par ce navigateur",
-  unknown: "Micro indisponible",
+  denied: "Microphone denied — allow it in the address bar",
+  "no-device": "No microphone detected",
+  insecure: "Microphone unavailable (the page is not secure, use https)",
+  unsupported: "This browser does not support the microphone",
+  unknown: "Microphone unavailable",
 };
 
 // ---------- connection ----------
@@ -42,16 +42,20 @@ const highScoreBanner = $("high-score-banner");
 try {
   const savedScore = Number(localStorage.getItem("echoes_high_score") ?? 0);
   if (savedScore > 0 && highScoreBanner) {
-    highScoreBanner.innerHTML = `✦ Record de Continuum : <strong>${savedScore.toLocaleString()} pts</strong>`;
+    highScoreBanner.innerHTML = `✦ Continuum record: <strong>${savedScore.toLocaleString()} pts</strong>`;
     highScoreBanner.classList.remove("hidden");
   }
 } catch {}
 
 function connect(): void {
-  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/home`);
+  const base = import.meta.env.VITE_WS_BASE as string | undefined;
+  const endpoint = base
+    ? `${base.replace(/\/$/, "")}/ws/home`
+    : `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/home`;
+  ws = new WebSocket(endpoint);
   ws.onopen = () => {
     for (const m of outbox.splice(0)) ws.send(JSON.stringify(m));
-    if (mic.active) send({ type: "listen_start", language: "fr", keywords: commandKeywords(ERAS) });
+    if (mic.active) send({ type: "listen_start", language: "en", keywords: commandKeywords(ERAS) });
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data as string) as HomeServerMessage;
@@ -85,7 +89,7 @@ const cardEls = ERAS.map((era, i) => {
       <h3>${era.title}</h3>
       <p class="conflict">${era.conflict}</p>
       <span class="figure">Figure : ${era.figure}</span>
-      <span class="cta">${era.url ? "Entrer dans cette époque" : "Bientôt accessible"}</span>
+      <span class="cta">${era.url ? "Enter this era" : "Coming soon"}</span>
     </div>`;
   el.addEventListener("click", (e) => {
     if (wasDragging) return;
@@ -164,7 +168,7 @@ async function enter(): Promise<void> {
     card.classList.remove("shake");
     void card.offsetWidth;
     card.classList.add("shake");
-    void speaker.say([`La faille vers ${era.place} est encore instable. Pour l'instant, seule Troie est accessible.`]);
+    void speaker.say([`The rift to ${era.place} is still unstable. Only Troy is open for now.`]);
     return;
   }
   entering = true;
@@ -173,24 +177,26 @@ async function enter(): Promise<void> {
   $("warpTitle").innerHTML = `<small>${era.year}</small>${era.place}`;
   document.body.classList.add("warping");
   sky.warp();
-  const spoken = speaker.say([`Ouverture de la faille temporelle. Destination : ${era.place}, ${era.year.replace("av. J.-C.", "avant notre ère")}.`]);
-  await Promise.race([spoken, new Promise((r) => setTimeout(r, 7000))]);
-  await new Promise((r) => setTimeout(r, 400));
+  const spoken = speaker.say([`Opening the temporal rift. Destination: ${era.place}, ${era.year}.`]);
+  await Promise.race([spoken, new Promise((r) => setTimeout(r, 1200))]);
   location.href = era.url;
 }
 
 // ---------- mouse / keyboard ----------
-let wheelLock = 0;
+let wheelGesture = false;
+let wheelQuiet = 0;
 window.addEventListener(
   "wheel",
   (e) => {
     if (!started) return;
     e.preventDefault();
-    const now = performance.now();
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (now < wheelLock || Math.abs(delta) < 8) return;
-    wheelLock = now + 420;
-    focus(index + Math.sign(delta));
+    if (!wheelGesture && Math.abs(delta) > 18) {
+      wheelGesture = true;
+      focus(index + Math.sign(delta));
+    }
+    clearTimeout(wheelQuiet);
+    wheelQuiet = window.setTimeout(() => (wheelGesture = false), 220);
   },
   { passive: false },
 );
@@ -206,6 +212,10 @@ $("stage").addEventListener("pointerdown", (e) => {
 
 window.addEventListener("pointermove", (e) => {
   if (dragX === null) return;
+  if (e.buttons === 0) {
+    dragX = null;
+    return;
+  }
   if (Math.abs(e.clientX - dragStartX) > 12) {
     wasDragging = true;
   }
@@ -318,17 +328,17 @@ class MicController {
   setStatus(text: string, state: "off" | "pending" | "on" | "error"): void {
     this.label.textContent = text;
     this.el.className = `mic ${state}`;
-    this.toggle.textContent = this.active ? "Couper" : "Activer";
+    this.toggle.textContent = this.active ? "Mute" : "Enable";
   }
 
   setReady(ready: boolean): void {
     if (!this.active) return;
-    if (ready) this.setStatus("À l'écoute — « gauche », « droite », « entrer »", "on");
-    else this.setStatus("Reconnexion au micro…", "pending");
+    if (ready) this.setStatus("Listening — “left”, “right”, “enter”", "on");
+    else this.setStatus("Reconnecting the microphone…", "pending");
   }
 
   async start(): Promise<void> {
-    this.setStatus("Autorisation du micro…", "pending");
+    this.setStatus("Requesting the microphone…", "pending");
     const err = await this.capture.start((b64) => send({ type: "listen_audio", audio: b64 }));
     if (err) {
       this.active = false;
@@ -336,15 +346,15 @@ class MicController {
       return;
     }
     this.active = true;
-    this.setStatus("Connexion à Gradium…", "pending");
-    send({ type: "listen_start", language: "fr", keywords: commandKeywords(ERAS) });
+    this.setStatus("Connecting to Gradium…", "pending");
+    send({ type: "listen_start", language: "en", keywords: commandKeywords(ERAS) });
   }
 
   stop(): void {
     this.capture.stop();
     if (this.active) send({ type: "listen_stop" });
     this.active = false;
-    this.setStatus("Micro inactif", "off");
+    this.setStatus("Mic off", "off");
   }
 
   get level(): number {

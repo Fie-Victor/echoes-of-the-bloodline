@@ -363,6 +363,98 @@ const WEATHER: Record<Palette["weather"], ConstructorParameters<typeof Particles
   },
 };
 
+function drop(mesh: THREE.Object3D, x: number, z: number, lift: number): void {
+  mesh.position.set(x, terrainHeight(x, z) + lift, z);
+  mesh.traverse((o) => {
+    if (o instanceof THREE.Mesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+    }
+  });
+}
+
+/** A few readable silhouettes so each battlefield is a place, not the same camp at night. */
+function placeLandmarks(scene: THREE.Scene, era: EraId): void {
+  const stone = new THREE.MeshStandardMaterial({ color: 0xd2c4a8, roughness: 0.92 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x6b4630, roughness: 0.86 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x3a322c, roughness: 0.8 });
+  if (era === "troy") {
+    for (const x of [-18, -11, 10, 17]) {
+      const ship = new THREE.Group();
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 5.5), wood);
+      hull.position.y = 0.45;
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 3.4), wood);
+      mast.position.y = 2.3;
+      const sail = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.6), new THREE.MeshStandardMaterial({ color: 0xe6d7b8, side: THREE.DoubleSide, roughness: 0.9 }));
+      sail.position.set(0, 2.2, 0);
+      ship.add(hull, mast, sail);
+      drop(ship, x, -24, 0);
+      scene.add(ship);
+    }
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(26, 5.5, 1.6), stone);
+    drop(wall, 0, 36, 2.6);
+    scene.add(wall);
+    const horse = new THREE.Group();
+    horse.add(new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.5, 4.2), wood));
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.5, 0.8), wood);
+    neck.position.set(0, 1.2, 1.8);
+    horse.add(neck);
+    drop(horse, 18, 22, 1.5);
+    scene.add(horse);
+  } else if (era === "alesia") {
+    const mound = new THREE.Mesh(new THREE.CylinderGeometry(7, 9, 3.2, 8), new THREE.MeshStandardMaterial({ color: 0x8a8a62, roughness: 1 }));
+    drop(mound, 0, 36, 1.2);
+    scene.add(mound);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 2.4), wood);
+      drop(post, Math.sin(a) * 6.2, 36 + Math.cos(a) * 6.2, 2.4);
+      scene.add(post);
+    }
+  } else if (era === "orleans") {
+    const cathedral = new THREE.Group();
+    const nave = new THREE.Mesh(new THREE.BoxGeometry(6, 7, 14), stone);
+    nave.position.y = 3.5;
+    const spire = new THREE.Mesh(new THREE.ConeGeometry(1.1, 8, 6), dark);
+    spire.position.set(0, 11, -5);
+    cathedral.add(nave, spire);
+    drop(cathedral, -20, 26, 0);
+    scene.add(cathedral);
+  } else if (era === "sekigahara") {
+    const torii = new THREE.Group();
+    const red = new THREE.MeshStandardMaterial({ color: 0x9c1c16, roughness: 0.55 });
+    for (const x of [-1.6, 1.6]) {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 4.2), red);
+      pillar.position.set(x, 2.1, 0);
+      torii.add(pillar);
+    }
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.28, 0.35), red);
+    lintel.position.y = 4;
+    const kasagi = new THREE.Mesh(new THREE.BoxGeometry(5, 0.18, 0.5), red);
+    kasagi.position.y = 4.35;
+    torii.add(lintel, kasagi);
+    drop(torii, 0, 24, 0);
+    scene.add(torii);
+  } else if (era === "austerlitz") {
+    const church = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 5, 8), new THREE.MeshStandardMaterial({ color: 0xe7e2d6, roughness: 0.85 }));
+    body.position.y = 2.5;
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 3, 4), dark);
+    roof.position.y = 6.2;
+    roof.rotation.y = Math.PI / 4;
+    church.add(body, roof);
+    drop(church, 20, 24, 0);
+    scene.add(church);
+    const pond = new THREE.Mesh(
+      new THREE.CircleGeometry(6, 20),
+      new THREE.MeshStandardMaterial({ color: 0xd5e4ee, roughness: 0.15, metalness: 0.05 }),
+    );
+    pond.rotation.x = -Math.PI / 2;
+    drop(pond, -16, 16, 0.05);
+    scene.add(pond);
+  }
+}
+
 export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer, era: EraId, pal: Palette): Promise<World> {
   scene.background = new THREE.Color(pal.sky);
   scene.fog = new THREE.FogExp2(pal.haze, pal.fog);
@@ -371,7 +463,7 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   const pmrem = new THREE.PMREMGenerator(renderer);
   const hdr = await loadHdr("/assets/hdri/qwantani_sunset_puresky.hdr");
   scene.environment = pmrem.fromEquirectangular(hdr).texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.22;
   hdr.dispose();
 
   const sun = new THREE.DirectionalLight(pal.sun, pal.sunIntensity);
@@ -381,9 +473,9 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   sun.shadow.normalBias = 0.03;
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 200 });
   scene.add(sun, sun.target);
-  scene.add(new THREE.HemisphereLight(pal.hemiSky, pal.hemiGround, 0.5));
+  scene.add(new THREE.HemisphereLight(pal.hemiSky, pal.hemiGround, 0.85));
 
-  const [vista] = await Promise.all([buildVista(scene, pal, era === "troy"), buildTerrain(scene, pal)]);
+  const [vista] = await Promise.all([buildVista(scene, pal, false), buildTerrain(scene, pal)]);
 
   const [cliff, boulder, mossRocks, firePit, barrels, crate, shield, lantern, deadTree, fern] = await Promise.all([
     "namaqualand_cliff_01", "namaqualand_boulder_02", "rock_moss_set_01", "stone_fire_pit", "wooden_barrels_01",
@@ -471,7 +563,8 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   });
   scene.add(dust.points, valleySmoke.points);
 
-  const sunDir = new THREE.Vector3(-0.35, 0.28, -1).normalize();
+  placeLandmarks(scene, era);
+  const sunDir = new THREE.Vector3(...pal.sunDir).normalize();
 
   return {
     sun,

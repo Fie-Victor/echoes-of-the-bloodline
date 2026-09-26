@@ -63,21 +63,21 @@ export class TouchControls {
     this.container.innerHTML = `
       <!-- Portrait warning banner on smartphones -->
       <div id="orientation-banner" class="orientation-banner hidden">
-        <span>📱 Conseil : Tournez l'appareil en <strong>mode paysage</strong> pour une meilleure expérience</span>
+        <span>📱 Tip: turn the device to <strong>landscape</strong> for a better view</span>
         <button id="btn-close-orientation" class="btn-close-banner">✕</button>
       </div>
 
       <!-- Top Utility Bar for Mobile -->
       <div class="touch-top-bar">
-        <a href="index.html" class="touch-top-btn" title="Retour à la Frise du Temps">
+        <a href="index.html" class="touch-top-btn" title="Back to the timeline">
           <span class="t-icon">🏛️</span>
-          <span class="t-txt">Frise</span>
+          <span class="t-txt">Home</span>
         </a>
-        <button id="btn-touch-journal" class="touch-top-btn" title="Journal & Succès">
+        <button id="btn-touch-journal" class="touch-top-btn" title="Journal and achievements">
           <span class="t-icon">📜</span>
-          <span class="t-txt">Succès</span>
+          <span class="t-txt">Feats</span>
         </button>
-        <button id="btn-touch-fullscreen" class="touch-top-btn" title="Plein Écran">
+        <button id="btn-touch-fullscreen" class="touch-top-btn" title="Full screen">
           <span class="t-icon">⛶</span>
         </button>
       </div>
@@ -99,33 +99,33 @@ export class TouchControls {
       <div id="touch-actions" class="touch-actions">
         <!-- Secondary utility action buttons -->
         <div class="touch-sub-actions">
-          <button id="btn-touch-astra" class="touch-round-btn btn-astra" title="Parler à Astra">
+          <button id="btn-touch-astra" class="touch-round-btn btn-astra" title="Talk to Astra">
             <span class="r-icon">✨</span>
             <span class="r-lbl">Astra</span>
           </button>
           <button id="btn-touch-mic" class="touch-round-btn btn-mic" title="Microphone">
             <span class="r-icon">🎙️</span>
-            <span class="r-lbl">Voix</span>
+            <span class="r-lbl">Voice</span>
           </button>
-          <button id="btn-touch-war" class="touch-round-btn btn-war" title="Déclencher la Guerre">
+          <button id="btn-touch-war" class="touch-round-btn btn-war" title="Start the battle">
             <span class="r-icon">🔥</span>
-            <span class="r-lbl">Guerre</span>
+            <span class="r-lbl">Fight</span>
           </button>
         </div>
 
         <!-- Main primary combat actions -->
         <div class="touch-main-actions">
-          <button id="btn-touch-talk" class="touch-action-btn btn-talk hidden" title="Parler">
+          <button id="btn-touch-talk" class="touch-action-btn btn-talk hidden" title="Speak">
             <span class="btn-sigil">💬</span>
-            <span class="btn-text">Parler</span>
+            <span class="btn-text">Speak</span>
           </button>
-          <button id="btn-touch-dodge" class="touch-action-btn btn-dodge" title="Esquive">
+          <button id="btn-touch-dodge" class="touch-action-btn btn-dodge" title="Dodge">
             <span class="btn-sigil">💨</span>
-            <span class="btn-text">Esquive</span>
+            <span class="btn-text">Dodge</span>
           </button>
-          <button id="btn-touch-attack" class="touch-action-btn btn-attack" title="Attaque">
+          <button id="btn-touch-attack" class="touch-action-btn btn-attack" title="Attack">
             <span class="btn-sigil">⚔️</span>
-            <span class="btn-text">Attaque</span>
+            <span class="btn-text">Attack</span>
           </button>
         </div>
       </div>
@@ -373,7 +373,7 @@ export class TouchControls {
   }
 
   /** Set contextual talk button visibility when near Achilles */
-  setTalkVisible(visible: boolean, label = "Parler"): void {
+  setTalkVisible(visible: boolean, label = "Speak"): void {
     if (visible) {
       this.talkBtn.classList.remove("hidden");
       this.talkBtn.querySelector(".btn-text")!.textContent = label;
