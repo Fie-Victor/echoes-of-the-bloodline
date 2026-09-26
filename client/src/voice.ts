@@ -9,7 +9,9 @@ THREE.AudioContext.setContext(ctx);
 export const audioListener = new THREE.AudioListener();
 
 export function resumeAudio(): void {
-  void ctx.resume();
+  if (ctx.state === "suspended") {
+    void ctx.resume();
+  }
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -18,22 +20,31 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-/** Plays streamed PCM chunks from a 3D emitter per speaker (spatialised at the NPC / drone). */
+/** Plays streamed PCM chunks from a 3D emitter per speaker with dual positional + clear dialogue blend. */
 export class VoicePlayer {
   private emitters: Record<string, THREE.PositionalAudio> = {};
   private endTime: Record<string, number> = {};
   private sources = new Set<AudioBufferSourceNode>();
+  private masterGain: GainNode;
+
+  constructor() {
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.value = 1.0;
+    this.masterGain.connect(ctx.destination);
+  }
 
   register(id: string, anchor: THREE.Object3D, height: number): void {
     const emitter = new THREE.PositionalAudio(audioListener);
-    emitter.setRefDistance(2.5);
-    emitter.setRolloffFactor(0.8);
+    emitter.setRefDistance(10.0);
+    emitter.setRolloffFactor(0.25);
+    emitter.setMaxDistance(120);
     emitter.position.y = height;
     anchor.add(emitter);
     this.emitters[id] = emitter;
   }
 
   play(id: string, b64: string, sampleRate: number): void {
+    resumeAudio();
     const raw = atob(b64);
     const pcm = new Int16Array(raw.length >> 1);
     for (let i = 0; i < pcm.length; i++) pcm[i] = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
@@ -42,7 +53,21 @@ export class VoicePlayer {
     for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(this.emitters[id]?.getOutput() ?? ctx.destination);
+
+    const emitter = this.emitters[id];
+    if (emitter) {
+      // Connect to positional audio for spatial feeling
+      try {
+        src.connect(emitter.getOutput());
+      } catch {}
+      // Dual-connect with a direct dialogue gain so speech is never muffled or inaudible
+      const directGain = ctx.createGain();
+      directGain.gain.value = 0.85;
+      src.connect(directGain).connect(this.masterGain);
+    } else {
+      src.connect(this.masterGain);
+    }
+
     const at = Math.max(ctx.currentTime + 0.05, this.endTime[id] ?? 0);
     src.start(at);
     this.endTime[id] = at + buf.duration;
@@ -50,15 +75,24 @@ export class VoicePlayer {
     src.onended = () => this.sources.delete(src);
   }
 
-  isSpeaking(id: string): boolean {
-    return ctx.currentTime < (this.endTime[id] ?? 0);
+  isSpeaking(id?: string): boolean {
+    if (id) return ctx.currentTime < (this.endTime[id] ?? 0);
+    return Object.values(this.endTime).some((t) => ctx.currentTime < t);
   }
 
   stop(): void {
-    for (const s of this.sources) s.stop();
+    for (const s of this.sources) {
+      try {
+        s.stop();
+      } catch {}
+    }
     this.sources.clear();
     this.endTime = {};
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    if ("speechSynthesis" in window) {
+      try {
+        speechSynthesis.cancel();
+      } catch {}
+    }
   }
 }
 
@@ -112,9 +146,9 @@ export interface MicEvents {
 }
 
 const PREROLL = 4;
-const START_FRAMES = 2;
-const END_FRAMES = 10; // 800 ms of silence closes the utterance
-const MAX_FRAMES = 200; // 16 s
+const START_FRAMES = 3;
+const END_FRAMES = 12; // ~960 ms of silence closes the utterance
+const MAX_FRAMES = 220; // ~17 s
 
 /**
  * Microphone streaming to Gradium. In "vad" mode it listens hands-free and opens/closes utterances on voice
@@ -212,20 +246,21 @@ export class Microphone {
     const thr = this.threshold();
     if (rms < thr) this.floor += (rms - this.floor) * 0.05;
     this.loud = rms > thr ? this.loud + 1 : 0;
-    if (this.mode === "vad" && this.loud >= START_FRAMES) this.begin();
+    if (this.mode === "vad" && this.loud >= (this.strict ? START_FRAMES + 3 : START_FRAMES)) this.begin();
   }
 
   private threshold(): number {
-    return Math.max(this.strict ? 0.06 : 0.02, this.floor * (this.strict ? 5 : 3));
+    return Math.max(this.strict ? 0.09 : 0.02, this.floor * (this.strict ? 6 : 3));
   }
 }
 
-/** Browser speech synthesis, used only when Gradium is unavailable. */
+/** Browser speech synthesis fallback. */
 export function speakLocal(text: string, speaker: "npc" | "astra"): void {
   if (!("speechSynthesis" in window)) return;
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "fr-FR";
-  u.pitch = speaker === "astra" ? 1.2 : 0.8;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "fr-FR";
+    u.pitch = speaker === "astra" ? 1.2 : 0.8;
+    speechSynthesis.speak(u);
+  } catch {}
 }

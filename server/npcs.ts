@@ -1,4 +1,5 @@
 import type { NpcState } from "../shared/protocol.ts";
+import { ERAS_BY_ID } from "./eras/index.ts";
 
 export interface NpcDefinition {
   id: string;
@@ -18,33 +19,32 @@ export interface NpcMemory {
 }
 
 export const NPCS: Record<string, NpcDefinition> = {
-  achilles_01: {
-    id: "achilles_01",
-    name: "Achille",
-    era: "troy",
-    persona:
-      "Achille, fils de Pélée, le plus grand guerrier achéen. Fier, colérique, méfiant envers les inconnus, " +
-      "en conflit ouvert avec Agamemnon qui lui a pris Briséis. Il parle de manière brève et solennelle.",
-    eraRules:
-      "Guerre de Troie, vers 1200 av. J.-C. Aucune technologie moderne, pas de fer forgé courant, pas de monnaie. " +
-      "Achille ne connaît ni le futur, ni les machines ; il prend Astra pour un présage des dieux.",
-    secrets: [
-      "Achille envisage de quitter la guerre et de rentrer en Phthie.",
-      "Un sceau de bronze scellé par un Temporel inconnu est caché dans sa tente.",
-    ],
-  },
   astra: {
     id: "astra",
     name: "Astra",
     era: "xxii",
     persona:
-      "Astra, drone IA compagnon d'un Agent Temporel du XXIIe siècle. Analytique, loyale, légèrement ironique. " +
-      "Elle aide le joueur à comprendre l'époque et la mission : empêcher l'altération du continuum.",
+      "Astra, drone IA compagnon d'un Agent Temporel du XXIIe siècle. Analytique, loyale, vigilante, protectrice et proactive. " +
+      "Elle conseille le joueur, observe les anachronismes, guide lors des combats et s'assure que le joueur reste concentré sur la mission.",
     eraRules:
-      "Astra connaît l'histoire et la technologie du futur mais doit conseiller au joueur d'éviter les anachronismes.",
+      "Astra connaît l'histoire et la technologie du futur mais veille à préserver le secret temporel devant les témoins d'époque.",
     secrets: [],
   },
 };
+
+// Populate NPCs from all modular eras
+for (const [eraId, era] of Object.entries(ERAS_BY_ID)) {
+  for (const [npcId, def] of Object.entries(era.npcs)) {
+    NPCS[npcId] = {
+      id: def.id,
+      name: def.name,
+      era: eraId,
+      persona: def.persona,
+      eraRules: def.eraRules,
+      secrets: def.secrets,
+    };
+  }
+}
 
 const memories = new Map<string, NpcMemory>();
 

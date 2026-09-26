@@ -24,29 +24,121 @@ interface GradiumMessage {
   message?: string;
 }
 
-/** Streams synthesized PCM chunks; resolves true when the stream completed normally. */
-export function synthesize(text: string, voiceId: string, onAudio: (b64: string) => void): { done: Promise<boolean>; cancel: () => void } {
-  const ws = open("tts", { voice_id: voiceId, output_format: `pcm_${SAMPLE_RATE}` });
-  let sent = false;
-  const done = new Promise<boolean>((resolve) => {
-    const timer = setTimeout(() => ws.terminate(), 15_000);
-    ws.on("message", (data) => {
-      const m = JSON.parse(data.toString()) as GradiumMessage;
-      if (m.type === "ready") {
-        ws.send(JSON.stringify({ type: "text", text }));
-        ws.send(JSON.stringify({ type: "end_of_stream" }));
-      } else if (m.type === "audio" && m.audio) {
-        sent = true;
-        onAudio(m.audio);
-      } else if (m.type === "error") console.warn("[gradium tts]", m.message);
-    });
-    ws.on("error", (e) => console.warn("[gradium tts]", e.message));
-    ws.on("close", () => {
+// Queue to serialize TTS requests and respect Gradium's active session limit
+let ttsQueue = Promise.resolve();
+
+function doSynthesize(
+  text: string,
+  voiceId: string,
+  onAudio: (b64: string) => void,
+  isCancelled: () => boolean,
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    if (isCancelled()) {
+      resolve(false);
+      return;
+    }
+
+    let ws: WebSocket | null = null;
+    let sent = false;
+    let timer: NodeJS.Timeout;
+
+    const cleanup = () => {
       clearTimeout(timer);
+      if (ws) {
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+          try {
+            ws.close();
+          } catch {}
+        }
+        ws = null;
+      }
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      resolve(sent);
+    }, 15_000);
+
+    try {
+      ws = open("tts", { voice_id: voiceId, output_format: `pcm_${SAMPLE_RATE}` });
+    } catch (e) {
+      cleanup();
+      resolve(false);
+      return;
+    }
+
+    ws.on("message", (data) => {
+      if (isCancelled()) {
+        cleanup();
+        resolve(sent);
+        return;
+      }
+      try {
+        const m = JSON.parse(data.toString()) as GradiumMessage;
+        if (m.type === "ready") {
+          ws?.send(JSON.stringify({ type: "text", text }));
+          ws?.send(JSON.stringify({ type: "end_of_stream" }));
+        } else if (m.type === "audio" && m.audio) {
+          sent = true;
+          onAudio(m.audio);
+        } else if (m.type === "end_of_stream") {
+          // Immediately close socket to free Gradium session slot
+          cleanup();
+          resolve(sent);
+        } else if (m.type === "error") {
+          console.warn("[gradium tts]", m.message);
+          cleanup();
+          resolve(sent);
+        }
+      } catch (err) {
+        console.warn("[gradium tts parse error]", err);
+      }
+    });
+
+    ws.on("error", (e) => {
+      console.warn("[gradium tts error]", e.message);
+      cleanup();
+      resolve(sent);
+    });
+
+    ws.on("close", () => {
+      cleanup();
       resolve(sent);
     });
   });
-  return { done, cancel: () => ws.terminate() };
+}
+
+/** Streams synthesized PCM chunks; resolves true when the stream completed normally. */
+export function synthesize(
+  text: string,
+  voiceId: string,
+  onAudio: (b64: string) => void,
+): { done: Promise<boolean>; cancel: () => void } {
+  let cancelled = false;
+
+  const job = async (): Promise<boolean> => {
+    if (cancelled) return false;
+    let ok = await doSynthesize(text, voiceId, onAudio, () => cancelled);
+    // If failed and not cancelled, retry once after 350ms (in case a previous session just released)
+    if (!ok && !cancelled) {
+      await new Promise((r) => setTimeout(r, 350));
+      if (!cancelled) {
+        ok = await doSynthesize(text, voiceId, onAudio, () => cancelled);
+      }
+    }
+    return ok;
+  };
+
+  const done = ttsQueue.then(job, job);
+  ttsQueue = done.then(() => {}, () => {});
+
+  return {
+    done,
+    cancel: () => {
+      cancelled = true;
+    },
+  };
 }
 
 /** One push-to-talk utterance: feed audio, then `finish()` flushes and resolves the full transcript. */
@@ -73,9 +165,23 @@ export class Transcriber {
           onPartial(this.text());
         } else if (m.type === "flushed") {
           this.ws.send(JSON.stringify({ type: "end_of_stream" }));
-        } else if (m.type === "error") console.warn("[gradium stt]", m.message);
+        } else if (m.type === "end_of_stream") {
+          try {
+            this.ws.close();
+          } catch {}
+        } else if (m.type === "error") {
+          console.warn("[gradium stt]", m.message);
+          try {
+            this.ws.close();
+          } catch {}
+        }
       });
-      this.ws.on("error", (e) => console.warn("[gradium stt]", e.message));
+      this.ws.on("error", (e) => {
+        console.warn("[gradium stt]", e.message);
+        try {
+          this.ws.close();
+        } catch {}
+      });
       this.ws.on("close", () => {
         clearTimeout(timer);
         resolve(this.text());
@@ -107,7 +213,9 @@ export class Transcriber {
   }
 
   abort(): void {
-    this.ws.terminate();
+    try {
+      this.ws.terminate();
+    } catch {}
   }
 }
 
@@ -145,7 +253,7 @@ export class CommandListener {
       if (this.ws !== ws) return;
       this.ready = false;
       this.onReady(false);
-      if (!this.closed) setTimeout(() => !this.closed && this.connect(), 500);
+      if (!this.closed) setTimeout(() => !this.closed && this.connect(), 1000);
     });
   }
 
@@ -155,7 +263,9 @@ export class CommandListener {
 
   close(): void {
     this.closed = true;
-    this.ws?.terminate();
+    try {
+      this.ws?.terminate();
+    } catch {}
     this.ws = null;
   }
 }
