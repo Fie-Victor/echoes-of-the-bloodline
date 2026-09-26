@@ -371,7 +371,11 @@ function roundHut(scene: THREE.Scene, x: number, z: number, r: number): void {
 function oppidum(scene: THREE.Scene, cx: number, cz: number): void {
   // Mont Auxois: a flat-topped hill ringed by a murus gallicus (stone face over a timber lattice).
   const base = terrainHeight(cx, cz);
-  add(scene, new THREE.CylinderGeometry(22, 34, 12, 40), 0x7a8458, cx, base + 4, cz);
+  // Skirt reaches well below the lowest surrounding ground so no underside shows where the terrain dips.
+  let low = base;
+  for (let a = 0; a < 16; a++) low = Math.min(low, terrainHeight(cx + Math.sin(a * 0.39) * 34, cz + Math.cos(a * 0.39) * 34));
+  const h = base + 10 - (low - 4);
+  add(scene, new THREE.CylinderGeometry(22, 40, h, 40), 0x7a8458, cx, base + 10 - h / 2, cz);
   const top = base + 10;
   for (let i = 0; i < 44; i++) {
     const a = (i / 44) * Math.PI * 2;
