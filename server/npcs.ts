@@ -1,4 +1,5 @@
 import type { NpcState } from "../shared/protocol.ts";
+import { ERAS_BY_ID } from "./eras/index.ts";
 
 export interface NpcDefinition {
   id: string;
@@ -27,21 +28,6 @@ export interface NpcMemory {
 }
 
 export const NPCS: Record<string, NpcDefinition> = {
-  achilles_01: {
-    id: "achilles_01",
-    name: "Achille",
-    era: "troy",
-    persona:
-      "Achille, fils de Pélée, le plus grand guerrier achéen. Fier, colérique, méfiant envers les inconnus, " +
-      "en conflit ouvert avec Agamemnon qui lui a pris Briséis. Il parle de manière brève et solennelle.",
-    eraRules:
-      "Guerre de Troie, vers 1200 av. J.-C. Aucune technologie moderne, pas de fer forgé courant, pas de monnaie. " +
-      "Achille ne connaît ni le futur, ni les machines ; il prend Astra pour un présage des dieux.",
-    secrets: [
-      "Achille envisage de quitter la guerre et de rentrer en Phthie.",
-      "Un sceau de bronze scellé par un Temporel inconnu est caché dans sa tente.",
-    ],
-  },
   caesar_01: {
     id: "caesar_01",
     name: "César",
@@ -156,6 +142,21 @@ export const NPCS: Record<string, NpcDefinition> = {
     secrets: [],
   },
 };
+
+// Populate NPCs from all modular eras; the playable chapters above keep their own definitions.
+for (const [eraId, era] of Object.entries(ERAS_BY_ID)) {
+  for (const [npcId, def] of Object.entries(era.npcs)) {
+    if (NPCS[npcId]) continue;
+    NPCS[npcId] = {
+      id: def.id,
+      name: def.name,
+      era: eraId,
+      persona: def.persona,
+      eraRules: def.eraRules,
+      secrets: def.secrets,
+    };
+  }
+}
 
 const memories = new Map<string, NpcMemory>();
 

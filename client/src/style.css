@@ -62,3 +62,56 @@ canvas { display: block; }
 #ammo { width: 100%; color: #ccc; }
 #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(140,0,0,.85)); }
 @media (max-width: 1400px) { #battle-hud { top: 96px; left: 22px; right: auto; margin: 0; width: min(420px, 45vw); } }
+
+#combat-banner {
+  position: fixed;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, rgba(200, 20, 20, 0.85), rgba(40, 10, 10, 0.95), rgba(200, 20, 20, 0.85));
+  border: 1px solid #ff4433;
+  box-shadow: 0 0 25px rgba(255, 50, 30, 0.6);
+  color: #fff;
+  padding: 10px 28px;
+  font-family: Cinzel, serif;
+  font-size: 19px;
+  letter-spacing: 2px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+  animation: banner-pulse 1.8s infinite;
+  transition: opacity 0.4s ease;
+}
+
+#combat-alert {
+  position: fixed;
+  bottom: 27%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(180, 20, 10, 0.85);
+  border: 2px solid #ffaa44;
+  box-shadow: 0 0 20px #ff5533;
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 1px;
+  padding: 8px 24px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 6;
+  text-shadow: 0 2px 4px #000;
+  animation: alert-shake 0.3s ease;
+}
+
+@keyframes banner-pulse {
+  0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.02); }
+}
+
+@keyframes alert-shake {
+  0% { transform: translateX(-50%) translateY(0); }
+  25% { transform: translateX(-52%) translateY(-2px); }
+  50% { transform: translateX(-48%) translateY(2px); }
+  75% { transform: translateX(-51%) translateY(-1px); }
+  100% { transform: translateX(-50%) translateY(0); }
+}

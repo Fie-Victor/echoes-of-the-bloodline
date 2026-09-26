@@ -14,6 +14,7 @@ import { CLIP_SPEED, Character, dressAsAgent, dressAsHoplite, loadHumanSkin, mak
 import { Drone } from "./drone.ts";
 import { CLIFF_EDGE_Z, buildWorld, terrainHeight } from "./environment.ts";
 import { type AstraBeat, ERAS, type Squad, type Tactic } from "./eras.ts";
+import { TroyBattleManager, playClashSound, playDodgeSound, playWarHorn } from "./eras/index.ts";
 import { GameSocket } from "./net.ts";
 import { type OutfitId, dressKit } from "./outfits.ts";
 import { hasUniform, paintUniform } from "./uniforms.ts";
@@ -49,6 +50,8 @@ const ui = {
   stats: $("stats"),
   prompt: $("prompt"),
   bubble: $("bubble"),
+  combatBanner: $("combat-banner"),
+  combatAlert: $("combat-alert"),
   chat: $("chat"),
   chatTitle: $("chat-title"),
   chatLog: $("chat-log"),
@@ -141,6 +144,7 @@ const game = {
   ammo: PLAYER_RANGED[eraId]?.ammo ?? 0,
   reload: 0,
   warnedHp: false,
+  warActive: false,
 };
 
 function refreshStats(): void {
@@ -226,6 +230,9 @@ async function init() {
   scene.add(astra.root);
   let portal: THREE.Mesh | null = null;
 
+  // Battle manager
+  const battleManager = new TroyBattleManager(scene, agentGltf, agentSkin, aspisFace);
+
   // ---- Networking ----
   const socket = new GameSocket(onServerMessage);
   const voices = new VoicePlayer();
@@ -250,6 +257,32 @@ async function init() {
     socket.send({ type: "stop_speech" });
   }
 
+  let alertTimer: number | undefined;
+  function triggerCombatGuidance(text: string, urgent: boolean, soundLine?: string): void {
+    clearTimeout(alertTimer);
+    ui.combatAlert.textContent = text;
+    ui.combatAlert.classList.remove("hidden");
+    alertTimer = window.setTimeout(() => ui.combatAlert.classList.add("hidden"), 3200);
+
+    logLine("sys", `Astra : ${text}`);
+    if (urgent || !voices.isSpeaking("astra")) {
+      const line = soundLine ?? text.replace(/[⚠️✨⚔️🏆\[\]]/g, "").trim();
+      say("astra", line);
+    }
+  }
+
+  function triggerWarMode(): void {
+    if (!troy || game.warActive) return;
+    game.warActive = true;
+    ui.objective.textContent = "⚔️ GUERRE DE TROIE : Suivez Achille et repoussez l'assaut troyen !";
+    ui.combatBanner.textContent = "⚔️ LA GUERRE DE TROIE ÉCLATE ! SUIVEZ ACHILLE ! ⚔️";
+    ui.combatBanner.classList.remove("hidden");
+    setTimeout(() => ui.combatBanner.classList.add("hidden"), 8000);
+
+    closeChat();
+    battleManager.startBattle(achilles.root.position, triggerCombatGuidance);
+  }
+
   function onServerMessage(msg: ServerMessage): void {
     if (msg.type === "npc_reply") handleReply(msg.npc_id, msg.response, msg.source);
     else if (msg.type === "speech_audio") voices.play(msg.npc_id, msg.audio, msg.sample_rate);
@@ -262,6 +295,7 @@ async function init() {
       } else subtitle("🎙 (rien entendu)", 1500);
     }
     else if (msg.type === "hologram") showHologram(msg.html);
+    else if (msg.type === "combat_callout") triggerCombatGuidance(msg.text, msg.urgent);
     else if (msg.type === "error") logLine("sys", `Erreur : ${msg.message}`);
   }
 
@@ -280,6 +314,11 @@ async function init() {
       if (!troy && game.phase === "meet" && (res.new_trust >= WAR_TRUST || game.exchanges >= WAR_EXCHANGES)) {
         window.setTimeout(callToWar, 3500 + res.dialogue.length * 40);
       }
+
+      // Check if Achilles accepts to go to war!
+      if (troy && res.trigger_war) {
+        setTimeout(() => triggerWarMode(), 2500);
+      }
     }
   }
 
@@ -290,21 +329,26 @@ async function init() {
   });
 
   function talk(npcId: string, text: string): void {
+    // If player speaks about combat, Achilles gets ready
+    if (/(combat|guerre|bataille|arme|lance|allons|gloire|navire|aider|troyen)/i.test(text)) {
+      setTimeout(() => triggerWarMode(), 3000);
+    }
     interrupt();
     logLine("player", `Toi : ${text}`);
     socket.send({ type: "talk", request: { npc_id: npcId, player_input: text, game_context: gameContext(npcId) } });
     armThinking(npcId);
   }
 
-  // Hands-free voice: while a dialogue is open the mic listens and voice activity opens/closes utterances;
-  // speaking over an NPC stops its speech (barge-in). V is a push-to-talk override usable anywhere.
   const voiceTarget = () =>
     game.talkingTo ?? (player.root.position.distanceTo(achilles.root.position) < TALK_RANGE * 2 ? LEADER : "astra");
   let voiceNpc = "astra";
   const mic = new Microphone({
     onChunk: (audio) => socket.send({ type: "voice_audio", audio }),
     onSpeechStart: () => {
-      interrupt();
+      // Do not interrupt Achilles if he is speaking unless the user is in dialogue chat or presses V deliberately
+      if (game.talkingTo || !voices.isSpeaking("achilles_01")) {
+        interrupt();
+      }
       voiceNpc = voiceTarget();
       ui.mic.classList.add("on");
       subtitle("🎙 …", 0, true);
@@ -611,6 +655,7 @@ async function init() {
     } else if (e.code === "Space" && dodgeTime <= 0) {
       e.preventDefault();
       dodgeTime = 0.35;
+      playDodgeSound();
     }
   });
   addEventListener("keyup", (e) => {
@@ -628,6 +673,7 @@ async function init() {
     }
     if (e.button === 0 && player.attack <= 0) {
       player.attack = 0.35;
+      playClashSound();
       if (battle && game.phase === "battle") {
         window.setTimeout(() => battle?.playerStrike(player.root.position, player.root.rotation.y, eraId === "austerlitz" ? 45 : 40), 150);
       }
@@ -650,6 +696,22 @@ async function init() {
     composer.setSize(innerWidth, innerHeight);
     syncFxaa();
   });
+
+  // ---- Proactive Companion Manager ----
+  let idleTime = 0;
+  let proactiveIndex = 0;
+  const PROACTIVE_LINES = [
+    "Agent, regarde Achille près du feu. L'affront d'Agamemnon le ronge, mais son instinct de guerrier ne demande qu'à s'embraser.",
+    "Rappelle-lui sa soif de gloire immortelle ! C'est le point sensible de tout héros achéen.",
+    "Les vigies annoncent du mouvement vers les murailles. Si les Troyens brûlent les navires, le continuum s'effondrera !",
+    "N'hésite pas à lui proposer d'aller au combat à ses côtés. Il respecte la vaillance par-dessus tout.",
+    "Garde ta lance bien en main. Tu peux frapper avec le clic gauche et esquiver avec Espace.",
+    "Attention à ne pas faire d'anachronismes. Pour Achille, je suis un présage ailé envoyé par Athéna.",
+    "Tu explores la zone ? Approche-toi d'Achille et appuie sur E pour lui parler franchement.",
+  ];
+
+  let cliffWarned = false;
+  let fireWarned = false;
 
   // ---- Loop ----
   const clock = new THREE.Clock();
@@ -704,9 +766,17 @@ async function init() {
     const a = achilles.root;
     const toPlayer = Math.atan2(p.x - a.position.x, p.z - a.position.z);
     const near = p.distanceTo(a.position) < 8;
-    faceTowards(a, near || game.leaderState !== "idle" ? toPlayer : 0.6 + Math.sin(t * 0.2) * 0.4, 3, dt);
-    const achillesTalking = game.thinking || (voices.isSpeaking(LEADER) && game.leaderState !== "angry");
-    achilles.play(achillesTalking ? "Talk" : STATE_ANIM[game.leaderState]);
+
+    if (!game.warActive) {
+      faceTowards(a, near || game.leaderState !== "idle" ? toPlayer : 0.6 + Math.sin(t * 0.2) * 0.4, 3, dt);
+      const achillesTalking = game.thinking || (voices.isSpeaking(LEADER) && game.leaderState !== "angry");
+      achilles.play(achillesTalking ? "Talk" : STATE_ANIM[game.leaderState]);
+    }
+
+    if (game.warActive) {
+      battleManager.update(dt, p, player.attack > 0.15, dodgeTime > 0, achilles, triggerCombatGuidance);
+    }
+
     astra.speaking = voices.isSpeaking("astra");
     mic.strict = astra.speaking || voices.isSpeaking(LEADER);
     achilles.update(dt);
@@ -727,7 +797,38 @@ async function init() {
     const hurt = Number(ui.hurt.style.opacity || 0);
     if (hurt > 0) ui.hurt.style.opacity = String(Math.max(0, hurt - dt * 0.8));
 
-    ui.prompt.classList.toggle("hidden", !canTalkToLeader() || game.talkingTo !== null);
+    ui.prompt.classList.toggle("hidden", !canTalkToLeader() || game.talkingTo !== null || game.warActive);
+
+    // Companion proactive conversation when idle
+    if (troy && !game.warActive && !game.talkingTo && !voices.isSpeaking()) {
+      idleTime += dt;
+      if (idleTime > 13) {
+        idleTime = 0;
+        const line = PROACTIVE_LINES[proactiveIndex % PROACTIVE_LINES.length];
+        proactiveIndex++;
+        logLine("sys", `Astra : ${line}`);
+        subtitle(`Astra : ${line}`, 6000);
+        say("astra", line);
+      }
+
+      // Proactive location triggers
+      if (!cliffWarned && p.z < CLIFF_EDGE_Z + 5) {
+        cliffWarned = true;
+        const warn = "Attention au bord de la falaise ! Les vagues s'écrasent violemment en contrebas.";
+        logLine("sys", `Astra : ${warn}`);
+        subtitle(`Astra : ${warn}`, 5000);
+        say("astra", warn);
+      }
+      if (!fireWarned && p.distanceTo(world.interactables.achillesSpot) < 5) {
+        fireWarned = true;
+        const warn = "Achille est là. Parle-lui de gloire, de combat et propose ton aide pour les navires !";
+        logLine("sys", `Astra : ${warn}`);
+        subtitle(`Astra : ${warn}`, 5000);
+        say("astra", warn);
+      }
+    } else {
+      idleTime = 0;
+    }
 
     shoulder.set(-0.55, 0, 0).applyAxisAngle(up, camYaw);
     camTarget.set(p.x, p.y + 1.55, p.z).add(shoulder);
@@ -754,7 +855,7 @@ async function init() {
   if (import.meta.env.DEV) {
     Object.assign(window, {
       __dbg: {
-        player, achilles, voices, mic, game, callToWar,
+        player, achilles, voices, mic, game, callToWar, battleManager, triggerWarMode,
         battle: () => battle,
         setView: (yaw: number, pitch: number) => ((camYaw = yaw), (camPitch = pitch)),
       },

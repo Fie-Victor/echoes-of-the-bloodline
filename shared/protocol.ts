@@ -17,6 +17,7 @@ export interface NpcResponse {
   npc_state: NpcState;
   new_trust: number;
   trigger_devin_ui: string | null;
+  trigger_war?: boolean;
 }
 
 export type ClientMessage =
@@ -40,4 +41,5 @@ export type ServerMessage =
   | { type: "speech_audio"; npc_id: string; audio: string; sample_rate: number }
   /** `ok: false` means TTS was unavailable; the client may fall back to local synthesis of `text`. */
   | { type: "speech_end"; npc_id: string; ok: boolean; text: string }
+  | { type: "combat_callout"; text: string; urgent: boolean }
   | { type: "error"; message: string };

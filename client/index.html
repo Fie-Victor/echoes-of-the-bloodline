@@ -1,54 +1,60 @@
 <!doctype html>
 <html lang="fr">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Échos de la Lignée</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Échos de la Lignée — La Frise du Temps</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <div id="splash">
-      <div class="splash-inner">
-        <div class="splash-sub" id="splash-sub">Chronique I — Troie</div>
+    <canvas id="sky"></canvas>
+    <div id="app">
+      <header class="brand">
         <h1>Échos de la Lignée</h1>
-        <div id="loader"><div id="loader-bar"></div></div>
-        <div id="loader-text">Synchronisation du continuum…</div>
-        <button id="start" class="hidden">Entrer dans l'époque</button>
-        <nav id="eras"></nav>
+        <p>Traverse les siècles. Apaise les conflits. Sauve ta lignée.</p>
+      </header>
+
+      <section id="stage" aria-label="Époques">
+        <button class="nav prev" id="prev" aria-label="Époque précédente">‹</button>
+        <div id="cards"></div>
+        <button class="nav next" id="next" aria-label="Époque suivante">›</button>
+      </section>
+
+      <nav id="timeline" aria-label="Frise temporelle">
+        <div class="rail"><div class="rail-glow" id="railGlow"></div></div>
+        <div id="nodes"></div>
+      </nav>
+
+      <footer id="hud">
+        <div id="astra" class="astra">
+          <div class="astra-orb"><canvas id="astraWave" width="64" height="64"></canvas></div>
+          <div class="astra-text">
+            <span class="who">Astra</span>
+            <p id="subtitle"></p>
+          </div>
+          <button id="skip" class="ghost" hidden>Passer ⏭</button>
+        </div>
+        <div id="mic" class="mic off">
+          <span class="dot"></span>
+          <span id="micLabel">Micro inactif</span>
+          <span id="heard" class="heard"></span>
+          <button id="micToggle" class="ghost">Activer</button>
+        </div>
+      </footer>
+    </div>
+
+    <div id="gate">
+      <div class="gate-inner">
+        <div class="sigil"></div>
+        <h1>Échos de la Lignée</h1>
+        <p>Astra va te guider à travers le temps. Active le son et autorise le micro pour naviguer à la voix.</p>
+        <button id="start" class="primary">Commencer le voyage</button>
+        <small>Molette ou flèches pour défiler · clic pour entrer · ou dis « gauche », « droite », « entrer »</small>
       </div>
     </div>
-    <div id="crosshair"></div>
-    <div id="hud">
-      <div id="title">ÉCHOS DE LA LIGNÉE — Troie, 1200 av. J.-C.</div>
-      <div id="objective">Objectif : gagner la confiance d'Achille.</div>
-      <div id="stats"></div>
-      <div id="help">ZQSD/WASD bouger · Shift courir · Espace esquiver · Clic attaquer · Clic droit lancer/tirer · Souris caméra · E parler · T Astra · 1-3 répondre à Astra · V (maintenir) parler au micro</div>
-    </div>
-    <div id="battle-hud" class="hidden">
-      <div class="army"><span id="ally-label"></span><div class="bar"><div id="ally-bar"></div></div></div>
-      <div class="army enemy"><span id="enemy-label"></span><div class="bar"><div id="enemy-bar"></div></div></div>
-      <div id="player-hp"><span>Vitalité</span><div class="bar"><div id="hp-bar"></div></div><span id="ammo"></span></div>
-    </div>
-    <div id="hurt"></div>
-    <div id="comms" class="hidden">
-      <div class="comms-head">◈ ASTRA — canal temporel</div>
-      <div id="comms-text"></div>
-      <div id="comms-choices"></div>
-    </div>
-    <div id="prompt" class="hidden">[E] Parler à Achille</div>
-    <div id="bubble" class="hidden"></div>
-    <div id="subtitle" class="hidden"></div>
-    <div id="chat" class="hidden">
-      <div id="chat-title"></div>
-      <div id="chat-log"></div>
-      <form id="chat-form">
-        <input id="chat-input" autocomplete="off" placeholder="Parle à voix haute… ou écris ici (Entrée envoyer, Échap fermer)" />
-        <button id="mic" type="button" title="Micro on/off">🎙</button>
-      </form>
-    </div>
-    <div id="hologram" class="hidden"><iframe id="hologram-frame" sandbox="allow-scripts"></iframe></div>
-    <script type="module" src="./src/main.ts"></script>
+
+    <div id="warp"><div class="warp-title" id="warpTitle"></div></div>
+    <script type="module" src="/src/home/home.ts"></script>
   </body>
 </html>
