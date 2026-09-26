@@ -12,6 +12,7 @@ import { CLIP_SPEED, Character, dressAsAgent, dressAsHoplite, loadHumanSkin, mak
 import { Drone } from "./drone.ts";
 import { CLIFF_EDGE_Z, buildWorld, terrainHeight } from "./environment.ts";
 import { TroyBattleManager, playClashSound, playDodgeSound, playWarHorn } from "./eras/index.ts";
+import { GamificationManager } from "./gamification.ts";
 import { GameSocket } from "./net.ts";
 import { Microphone, VoicePlayer, audioListener, resumeAudio, speakLocal } from "./voice.ts";
 
@@ -150,6 +151,18 @@ async function init() {
   // Battle manager
   const battleManager = new TroyBattleManager(scene, agentGltf, agentSkin, aspisFace);
 
+  // Gamification Manager
+  const gamification = new GamificationManager(() => {
+    // Respawn callback: reset player position and reset battle if needed
+    player.root.position.set(2, terrainHeight(2, 1), 1);
+    player.root.rotation.y = Math.PI;
+    if (game.warActive) {
+      battleManager.resetBattle();
+      game.warActive = false;
+      ui.objective.textContent = "Objectif : gagner la confiance d'Achille.";
+    }
+  });
+
   // ---- Networking ----
   const socket = new GameSocket(onServerMessage);
   const voices = new VoicePlayer();
@@ -197,7 +210,7 @@ async function init() {
     setTimeout(() => ui.combatBanner.classList.add("hidden"), 8000);
 
     closeChat();
-    battleManager.startBattle(achilles.root.position, triggerCombatGuidance);
+    battleManager.startBattle(achilles.root.position, triggerCombatGuidance, gamification);
   }
 
   function onServerMessage(msg: ServerMessage): void {
@@ -223,10 +236,16 @@ async function init() {
     logLine("npc", `${NPC_NAMES[npcId]} : ${res.dialogue}`, source === "mock" ? "(mock)" : "");
     if (!game.talkingTo) subtitle(`${NPC_NAMES[npcId]} : ${res.dialogue}`, 4500 + res.dialogue.length * 60);
     if (npcId === "achilles_01") {
+      const oldTrust = game.trust.achilles_01 ?? 45;
+      const trustDiff = res.new_trust - oldTrust;
       game.trust.achilles_01 = res.new_trust;
       game.achillesState = res.npc_state;
       (aura.material as THREE.MeshBasicMaterial).color.setHex(STATE_COLORS[res.npc_state]);
       refreshStats();
+
+      if (trustDiff > 0) {
+        gamification.registerTrustGain(trustDiff);
+      }
 
       // Check if Achilles accepts to go to war!
       if (res.trigger_war) {
@@ -351,6 +370,7 @@ async function init() {
     ui.objective.textContent = "Continuum stabilisé — une brèche temporelle s'est ouverte près de la tente.";
     logLine("sys", "Astra : Verrou ouvert. Brèche temporelle détectée.");
     say("astra", "Verrou ouvert. Brèche temporelle détectée.");
+    gamification.registerPuzzleSolved();
     if (!portal) {
       const p = world.interactables.portalSpot;
       portal = new THREE.Mesh(
@@ -391,6 +411,10 @@ async function init() {
       e.preventDefault();
       dodgeTime = 0.35;
       playDodgeSound();
+    } else if (e.code === "KeyB" && !game.warActive) {
+      e.preventDefault();
+      logLine("sys", "Achille : Aux armes ! Les Troyens chargent nos lignes !");
+      triggerWarMode();
     }
   });
   addEventListener("keyup", (e) => {
@@ -501,7 +525,14 @@ async function init() {
 
     // Battle update
     if (game.warActive) {
-      battleManager.update(dt, p, player.attack > 0.15, dodgeTime > 0, achilles, triggerCombatGuidance);
+      battleManager.update(dt, p, player.attack > 0.15, dodgeTime > 0, achilles, triggerCombatGuidance, gamification);
+    }
+
+    gamification.update(dt);
+    if (gamification.invulnerableTimer > 0) {
+      player.root.visible = Math.floor(t * 16) % 2 === 0;
+    } else {
+      player.root.visible = true;
     }
 
     astra.speaking = voices.isSpeaking("astra");
@@ -532,6 +563,7 @@ async function init() {
       // Proactive location triggers
       if (!cliffWarned && p.z < CLIFF_EDGE_Z + 5) {
         cliffWarned = true;
+        gamification.addPoints(50, "Falaise Découverte", { color: "cyan" });
         const warn = "Attention au bord de la falaise ! Les vagues s'écrasent violemment en contrebas.";
         logLine("sys", `Astra : ${warn}`);
         subtitle(`Astra : ${warn}`, 5000);
@@ -539,6 +571,7 @@ async function init() {
       }
       if (!fireWarned && p.distanceTo(world.interactables.achillesSpot) < 5) {
         fireWarned = true;
+        gamification.addPoints(50, "Foyer d'Achille Découvert", { color: "cyan" });
         const warn = "Achille est là. Parle-lui de gloire, de combat et propose ton aide pour les navires !";
         logLine("sys", `Astra : ${warn}`);
         subtitle(`Astra : ${warn}`, 5000);
@@ -568,7 +601,7 @@ async function init() {
 
   if (import.meta.env.DEV) {
     Object.assign(window, {
-      __dbg: { player, achilles, voices, mic, battleManager, triggerWarMode, setView: (yaw: number, pitch: number) => ((camYaw = yaw), (camPitch = pitch)) },
+      __dbg: { player, achilles, voices, mic, battleManager, gamification, triggerWarMode, setView: (yaw: number, pitch: number) => ((camYaw = yaw), (camPitch = pitch)) },
     });
   }
   renderer.compile(scene, camera);
@@ -579,6 +612,7 @@ async function init() {
     ui.splash.classList.add("fade");
     resumeAudio();
     renderer.domElement.requestPointerLock();
+    gamification.addPoints(100, "Synchronisation Troie (-1184)", { color: "gold" });
     logLine("sys", "Astra : Agent, nous sommes en 1184 av. J.-C. Achille est près du feu. Évitez tout anachronisme.");
     say("astra", "Agent, nous sommes à Troie. Achille est près du feu. Évitez tout anachronisme. Maintenez V pour me parler.");
   });

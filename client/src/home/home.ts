@@ -38,6 +38,15 @@ const speaker = new Speaker(send, (text) => {
   subtitleEl.classList.toggle("show", Boolean(text));
 });
 
+const highScoreBanner = $("high-score-banner");
+try {
+  const savedScore = Number(localStorage.getItem("echoes_high_score") ?? 0);
+  if (savedScore > 0 && highScoreBanner) {
+    highScoreBanner.innerHTML = `✦ Record de Continuum : <strong>${savedScore.toLocaleString()} pts</strong>`;
+    highScoreBanner.classList.remove("hidden");
+  }
+} catch {}
+
 function connect(): void {
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/home`);
   ws.onopen = () => {
@@ -60,12 +69,14 @@ const nodesEl = $("nodes");
 let index = Math.max(0, ERAS.findIndex((e) => e.url));
 let entering = false;
 
+let wasDragging = false;
+
 const cardEls = ERAS.map((era, i) => {
   const el = document.createElement("article");
   el.className = "card";
   el.style.setProperty("--accent", era.accent);
   el.innerHTML = `
-    <div class="art" style="background-image:url(/eras/${era.id}.jpg)"></div>
+    <div class="art" style="background-image:url(eras/${era.id}.jpg)"></div>
     <div class="shade"></div>
     ${era.url ? "" : '<span class="badge">Faille instable</span>'}
     <div class="body">
@@ -76,12 +87,17 @@ const cardEls = ERAS.map((era, i) => {
       <span class="figure">Figure : ${era.figure}</span>
       <span class="cta">${era.url ? "Entrer dans cette époque" : "Bientôt accessible"}</span>
     </div>`;
-  el.addEventListener("click", () => {
+  el.addEventListener("click", (e) => {
+    if (wasDragging) return;
     if (i === index) enter();
-    else {
-      focus(i);
-      enter();
-    }
+    else focus(i);
+  });
+  const ctaBtn = el.querySelector(".cta");
+  ctaBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (wasDragging) return;
+    if (i !== index) focus(i);
+    void enter();
   });
   cardsEl.appendChild(el);
   return el;
@@ -180,13 +196,78 @@ window.addEventListener(
 );
 
 let dragX: number | null = null;
-$("stage").addEventListener("pointerdown", (e) => (dragX = e.clientX));
+let dragStartX = 0;
+
+$("stage").addEventListener("pointerdown", (e) => {
+  dragX = e.clientX;
+  dragStartX = e.clientX;
+  wasDragging = false;
+});
+
+window.addEventListener("pointermove", (e) => {
+  if (dragX === null) return;
+  if (Math.abs(e.clientX - dragStartX) > 12) {
+    wasDragging = true;
+  }
+});
+
 window.addEventListener("pointerup", (e) => {
   if (dragX === null) return;
   const dx = e.clientX - dragX;
   dragX = null;
-  if (Math.abs(dx) > 60) focus(index - Math.sign(dx));
+  if (Math.abs(dx) > 50) {
+    focus(index - Math.sign(dx));
+  }
+  setTimeout(() => (wasDragging = false), 60);
 });
+
+window.addEventListener("pointercancel", () => {
+  dragX = null;
+  setTimeout(() => (wasDragging = false), 60);
+});
+
+// Mobile touch gestures directly on stage
+let touchStartX = 0;
+let touchStartY = 0;
+$("stage").addEventListener(
+  "touchstart",
+  (e) => {
+    if (e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      wasDragging = false;
+    }
+  },
+  { passive: true },
+);
+
+$("stage").addEventListener(
+  "touchmove",
+  (e) => {
+    if (e.touches.length === 1) {
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+        wasDragging = true;
+      }
+    }
+  },
+  { passive: true },
+);
+
+$("stage").addEventListener(
+  "touchend",
+  (e) => {
+    if (e.changedTouches.length === 1) {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) {
+        focus(index - Math.sign(dx));
+      }
+      setTimeout(() => (wasDragging = false), 60);
+    }
+  },
+  { passive: true },
+);
 
 window.addEventListener("keydown", (e) => {
   if (!started) return;

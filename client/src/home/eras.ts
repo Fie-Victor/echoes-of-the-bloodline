@@ -39,7 +39,7 @@ export const ERAS: Era[] = [
     figure: "Achille",
     voiceLine: "Troie, 1184 avant notre ère. Achille boude sous sa tente, et le sceau du temps se fissure.",
     aliases: ["troie", "troy", "achille", "grèce", "grece", "grec"],
-    url: "/troy.html",
+    url: "troy.html",
     accent: "#e0a64a",
   },
   {

@@ -7,12 +7,26 @@ const gltfLoader = new GLTFLoader(manager);
 const textureLoader = new THREE.TextureLoader(manager);
 const hdrLoader = new HDRLoader(manager);
 
+/**
+ * Resolves any asset path relative to the current page base URL.
+ * Critical for itch.io iframe/subdirectory deployment.
+ */
+export function resolveAssetUrl(url: string): string {
+  if (!url) return url;
+  if (/^(?:[a-z]+:)?\/\//i.test(url) || url.startsWith("data:") || url.startsWith("blob:")) {
+    return url;
+  }
+  const cleanPath = url.replace(/^\/+/, "");
+  const base = typeof document !== "undefined" && document.baseURI ? document.baseURI : window.location.href;
+  return new URL(cleanPath, base).href;
+}
+
 export function loadGltf(url: string): Promise<GLTF> {
-  return gltfLoader.loadAsync(url);
+  return gltfLoader.loadAsync(resolveAssetUrl(url));
 }
 
 export async function loadModel(name: string): Promise<THREE.Group> {
-  const gltf = await loadGltf(`/assets/models/${name}/${name}.gltf`);
+  const gltf = await loadGltf(`assets/models/${name}/${name}.gltf`);
   gltf.scene.traverse((o) => {
     if (o instanceof THREE.Mesh) {
       o.castShadow = true;
@@ -23,7 +37,7 @@ export async function loadModel(name: string): Promise<THREE.Group> {
 }
 
 export function loadTexture(url: string, srgb = false): Promise<THREE.Texture> {
-  return textureLoader.loadAsync(url).then((t) => {
+  return textureLoader.loadAsync(resolveAssetUrl(url)).then((t) => {
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 8;
     return t;
@@ -31,7 +45,7 @@ export function loadTexture(url: string, srgb = false): Promise<THREE.Texture> {
 }
 
 export async function loadPbr(name: string, repeat: number): Promise<THREE.MeshStandardMaterial> {
-  const base = `/assets/textures/${name}`;
+  const base = `assets/textures/${name}`;
   const [map, normalMap, arm] = await Promise.all([
     loadTexture(`${base}/diff.jpg`, true),
     loadTexture(`${base}/nor.jpg`),
@@ -45,7 +59,7 @@ export async function loadPbr(name: string, repeat: number): Promise<THREE.MeshS
 }
 
 export function loadHdr(url: string): Promise<THREE.DataTexture> {
-  return hdrLoader.loadAsync(url);
+  return hdrLoader.loadAsync(resolveAssetUrl(url));
 }
 
 let softTexture: THREE.Texture | null = null;
