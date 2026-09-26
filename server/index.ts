@@ -9,6 +9,7 @@ import type { ClientMessage, NpcRequest, ServerMessage } from "../shared/protoco
 import { think } from "./brain.ts";
 import { SAMPLE_RATE, Transcriber, VOICES, gradiumEnabled, synthesize } from "./gradium.ts";
 import { generateHologram } from "./holograms.ts";
+import { handleHomeSocket } from "./home.ts";
 import { NPCS, clearSession, getMemory } from "./npcs.ts";
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -17,7 +18,19 @@ const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../d
 const app = express();
 app.use(express.static(distDir));
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
+const wss = new WebSocketServer({ noServer: true });
+const homeWss = new WebSocketServer({ noServer: true });
+homeWss.on("connection", handleHomeSocket);
+
+server.on("upgrade", (req, socket, head) => {
+  const { pathname } = new URL(req.url ?? "/", "http://localhost");
+  const target = pathname === "/ws" ? wss : pathname === "/ws/home" ? homeWss : null;
+  if (!target) {
+    socket.destroy();
+    return;
+  }
+  target.handleUpgrade(req, socket, head, (ws) => target.emit("connection", ws, req));
+});
 
 function send(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));

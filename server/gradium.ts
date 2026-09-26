@@ -110,3 +110,52 @@ export class Transcriber {
     this.ws.terminate();
   }
 }
+
+/** Long-lived STT stream: every transcribed segment is reported as it arrives; reconnects if Gradium closes it. */
+export class CommandListener {
+  private ws: WebSocket | null = null;
+  private ready = false;
+  private closed = false;
+
+  constructor(
+    private language: string,
+    private keywords: string[],
+    private onText: (text: string) => void,
+    private onReady: (ready: boolean) => void,
+  ) {
+    this.connect();
+  }
+
+  private connect(): void {
+    this.ready = false;
+    const json_config: Record<string, unknown> = { language: this.language };
+    if (this.keywords.length) json_config.keywords = { words: this.keywords, boost: 3 };
+    const ws = open("asr", { input_format: "pcm", json_config });
+    this.ws = ws;
+    ws.on("message", (data) => {
+      const m = JSON.parse(data.toString()) as GradiumMessage;
+      if (m.type === "ready") {
+        this.ready = true;
+        this.onReady(true);
+      } else if (m.type === "text" && m.text) this.onText(m.text);
+      else if (m.type === "error") console.warn("[gradium stt]", m.message);
+    });
+    ws.on("error", (e) => console.warn("[gradium stt]", e.message));
+    ws.on("close", () => {
+      if (this.ws !== ws) return;
+      this.ready = false;
+      this.onReady(false);
+      if (!this.closed) setTimeout(() => !this.closed && this.connect(), 500);
+    });
+  }
+
+  push(b64: string): void {
+    if (this.ready && this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: "audio", audio: b64 }));
+  }
+
+  close(): void {
+    this.closed = true;
+    this.ws?.terminate();
+    this.ws = null;
+  }
+}
