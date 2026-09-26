@@ -28,7 +28,11 @@ ${history || "(début de la conversation)"}
 
 RÈGLES DE JEU:
 - Ne révèle un secret que si la confiance dépasse 70 et que le joueur le mérite.
-- Si la confiance atteint 80 ou plus et que le joueur demande de l'aide pour le sceau / la tente / le verrou, mets trigger_devin_ui à "generate_puzzle_lock". Sinon null.
+${
+    def.id === "achilles_01"
+      ? `- Si la confiance atteint 80 ou plus et que le joueur demande de l'aide pour le sceau / la tente / le verrou, mets trigger_devin_ui à "generate_puzzle_lock". Sinon null.`
+      : "- trigger_devin_ui est toujours null."
+  }
 - Ajuste new_trust (0-100) selon le respect, la pertinence et la sincérité du joueur (variation max ±15 par réplique).
 - Réponds en français, 1 à 3 phrases courtes, adaptées à l'oral.
 
@@ -78,15 +82,37 @@ async function askGemini(prompt: string, apiKey: string): Promise<GeminiNpcRespo
   return JSON.parse(text) as GeminiNpcResponse;
 }
 
+const ASTRA_HINTS: Record<string, string[]> = {
+  troy: ["Analyse en cours. Achille est près du feu, au nord. Gagne sa confiance sans évoquer le futur."],
+  alesia: [
+    "César est sous sa tente de commandement. Parle-lui de Rome, puis du plan vendu aux Gaulois : c'est l'anomalie.",
+    "Les Gaulois de l'armée de secours frappent aux points faibles de la circonvallation. Reste dans la ligne des scuta.",
+  ],
+  orleans: [
+    "Jeanne est près de son étendard. Parle-lui de sa foi et des Tourelles ; elle se méfie des beaux parleurs.",
+    "Les archers anglais tirent par volées. Quand je crie « volée », esquive ou baisse-toi derrière un pavois.",
+  ],
+  sekigahara: [
+    "Ieyasu attend près du maku. Sois patient et poli. Évoque Kobayakawa seulement quand il te fera confiance.",
+    "Le brouillard masque l'Ouest. Écoute les tambours : ils annoncent leur charge avant de l'apercevoir.",
+  ],
+  austerlitz: [
+    "L'Empereur est près des feux de bivouac. Il aime les faits : parle du plateau de Pratzen et de l'espion.",
+    "Les lignes russes tirent en salves. Entre deux salves, tu as quatre secondes pour charger à la baïonnette.",
+  ],
+};
+
 function mockBrain(def: NpcDefinition, mem: NpcMemory, req: NpcRequest): GeminiNpcResponse {
   const input = req.player_input.toLowerCase();
   if (def.id === "astra") {
-    return {
-      dialogue: "Analyse en cours. Achille est près du feu, au nord. Gagne sa confiance sans évoquer le futur.",
-      npc_state: "friendly",
-      new_trust: 100,
-      trigger_devin_ui: null,
-    };
+    const hints = ASTRA_HINTS[req.game_context.era] ?? ASTRA_HINTS.troy;
+    return { dialogue: hints[mem.history.length / 2 % hints.length], npc_state: "friendly", new_trust: 100, trigger_devin_ui: null };
+  }
+  if (def.mock) {
+    const rule = def.mock.rules.find((r) => r.pattern.test(input));
+    if (rule) return { dialogue: rule.dialogue, npc_state: rule.state, new_trust: mem.trust_level + rule.delta, trigger_devin_ui: null };
+    const line = def.mock.fallback[(mem.history.length / 2) % def.mock.fallback.length];
+    return { dialogue: line, npc_state: "idle", new_trust: mem.trust_level + (input.length > 20 ? 6 : 0), trigger_devin_ui: null };
   }
   if (/agamemnon/.test(input)) {
     return { dialogue: "Comment sais-tu cela, voyageur ? Baisse la voix.", npc_state: "suspicious", new_trust: mem.trust_level + 10, trigger_devin_ui: null };

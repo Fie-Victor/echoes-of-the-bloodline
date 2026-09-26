@@ -221,11 +221,11 @@ export class Microphone {
 }
 
 /** Browser speech synthesis, used only when Gradium is unavailable. */
-export function speakLocal(text: string, speaker: "npc" | "astra"): void {
+export function speakLocal(text: string, speaker: "npc" | "astra" | "woman"): void {
   if (!("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "fr-FR";
-  u.pitch = speaker === "astra" ? 1.2 : 0.8;
+  u.pitch = speaker === "astra" ? 1.2 : speaker === "woman" ? 1.05 : 0.8;
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
 }
