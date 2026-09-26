@@ -1,11 +1,11 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { loadHdr, loadModel, loadPbr, loadTexture } from "./assets.ts";
+import type { EraId } from "../../shared/eras.ts";
+import type { Palette } from "./eras.ts";
 import { Campfire, Particles } from "./fx.ts";
 
 export const CLIFF_EDGE_Z = -32;
-export const SKY_TOP = new THREE.Color(0x373033);
-export const HAZE = new THREE.Color(0x6b4a38);
 
 const smooth = THREE.MathUtils.smoothstep;
 
@@ -22,19 +22,37 @@ export interface World {
   interactables: { achillesSpot: THREE.Vector3; portalSpot: THREE.Vector3 };
 }
 
-async function buildVista(scene: THREE.Scene): Promise<THREE.Mesh> {
-  const tex = await loadTexture("/art/vista.jpg", true);
+function skyGradient(pal: Palette): THREE.CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext("2d")!;
+  const grad = g.createLinearGradient(0, 0, 0, 256);
+  const hex = (n: number) => `#${n.toString(16).padStart(6, "0")}`;
+  grad.addColorStop(0, hex(pal.sky));
+  grad.addColorStop(0.45, hex(pal.vistaTint));
+  grad.addColorStop(0.55, hex(pal.haze));
+  grad.addColorStop(1, hex(pal.hemiGround));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+async function buildVista(scene: THREE.Scene, pal: Palette, painted: boolean): Promise<THREE.Mesh> {
+  const tex = painted ? await loadTexture("/art/vista.jpg", true) : skyGradient(pal);
   tex.wrapS = THREE.MirroredRepeatWrapping;
   tex.repeat.x = 2;
   tex.offset.x = -0.5;
   const img = tex.image as HTMLImageElement;
   const radius = 600;
-  const height = (Math.PI * radius) / (img.width / img.height);
+  const height = (Math.PI * radius) / (painted ? img.width / img.height : 4);
   const geo = new THREE.CylinderGeometry(radius, radius, height, 96, 1, true);
-  const vista = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
+  const vista = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, color: painted ? pal.vistaTint : 0xffffff, side: THREE.BackSide, fog: false, depthWrite: false }));
   vista.userData.horizonOffset = height * (0.5 - 0.47);
   vista.renderOrder = -1;
-  const cap = new THREE.Mesh(new THREE.CircleGeometry(radius, 64), new THREE.MeshBasicMaterial({ color: SKY_TOP, fog: false, depthWrite: false }));
+  const cap = new THREE.Mesh(new THREE.CircleGeometry(radius, 64), new THREE.MeshBasicMaterial({ color: pal.sky, fog: false, depthWrite: false }));
   cap.rotation.x = Math.PI / 2;
   cap.position.y = height / 2 - 1;
   vista.add(cap);
@@ -42,7 +60,7 @@ async function buildVista(scene: THREE.Scene): Promise<THREE.Mesh> {
   return vista;
 }
 
-async function buildTerrain(scene: THREE.Scene): Promise<void> {
+async function buildTerrain(scene: THREE.Scene, pal: Palette): Promise<void> {
   const size = 180;
   const geo = new THREE.PlaneGeometry(size, size, 220, 220);
   geo.rotateX(-Math.PI / 2);
@@ -51,7 +69,7 @@ async function buildTerrain(scene: THREE.Scene): Promise<void> {
   geo.computeVertexNormals();
   geo.setAttribute("uv1", geo.attributes.uv);
   const mat = await loadPbr("aerial_grass_rock", 36);
-  mat.color.set(0xb8a58c);
+  mat.color.set(pal.ground);
   const ground = new THREE.Mesh(geo, mat);
   ground.receiveShadow = true;
   scene.add(ground);
@@ -195,9 +213,160 @@ class Banner {
   }
 }
 
-export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer): Promise<World> {
-  scene.background = SKY_TOP;
-  scene.fog = new THREE.FogExp2(HAZE, 0.011);
+function stakes(scene: THREE.Scene, z: number, from: number, to: number): void {
+  const wood = new THREE.MeshStandardMaterial({ color: 0x5a4430, roughness: 0.95 });
+  const geo = new THREE.CylinderGeometry(0.09, 0.11, 2.6, 6);
+  geo.translate(0, 1.1, 0);
+  const tip = new THREE.ConeGeometry(0.1, 0.35, 6);
+  tip.translate(0, 2.55, 0);
+  const merged = mergeGeometries([geo, tip]);
+  const count = Math.floor((to - from) / 0.24);
+  const inst = new THREE.InstancedMesh(merged, wood, count);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    const x = from + i * 0.24;
+    d.position.set(x, terrainHeight(x, z) - 0.2, z + Math.sin(i * 1.7) * 0.05);
+    d.rotation.set((Math.random() - 0.5) * 0.08, Math.random() * 3, (Math.random() - 0.5) * 0.08);
+    d.scale.setScalar(0.85 + Math.random() * 0.3);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  inst.castShadow = inst.receiveShadow = true;
+  scene.add(inst);
+}
+
+function tower(scene: THREE.Scene, x: number, z: number, h: number, stone: boolean): void {
+  const mat = new THREE.MeshStandardMaterial({ color: stone ? 0x8a8478 : 0x5a4430, roughness: 0.95 });
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(stone ? new THREE.CylinderGeometry(2.4, 2.8, h, 16) : new THREE.BoxGeometry(2.4, h, 2.4), mat);
+  body.position.y = h / 2;
+  g.add(body);
+  for (let i = 0; i < (stone ? 10 : 4); i++) {
+    const a = (i / (stone ? 10 : 4)) * Math.PI * 2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.5), mat);
+    m.position.set(Math.sin(a) * (stone ? 2.35 : 1.3), h + 0.35, Math.cos(a) * (stone ? 2.35 : 1.3));
+    m.rotation.y = a;
+    g.add(m);
+  }
+  g.traverse((o) => ((o.castShadow = true), (o.receiveShadow = true)));
+  scene.add(place(g, x, z, { ry: 0, dy: -0.5 }));
+}
+
+function wall(scene: THREE.Scene, z: number, from: number, to: number, h: number): void {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x847e72, roughness: 0.95 });
+  for (let x = from; x < to; x += 3) {
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(3.05, h, 1.4), mat);
+    seg.position.set(x + 1.5, terrainHeight(x + 1.5, z) + h / 2 - 0.4, z);
+    const merlon = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.4), mat);
+    merlon.position.set(x + 1.5, seg.position.y + h / 2 + 0.3, z);
+    for (const m of [seg, merlon]) {
+      m.castShadow = m.receiveShadow = true;
+      scene.add(m);
+    }
+  }
+}
+
+/** Japanese field camp: a maku curtain wall with the Tokugawa mon and tall nobori banners. */
+function maku(scene: THREE.Scene, cx: number, cz: number): void {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 128;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#efe9da";
+  g.fillRect(0, 0, 512, 128);
+  g.fillStyle = "#1a1a1a";
+  g.fillRect(0, 30, 512, 14);
+  g.fillRect(0, 84, 512, 14);
+  g.beginPath();
+  g.arc(256, 64, 44, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#efe9da";
+  for (let i = 0; i < 3; i++) {
+    g.beginPath();
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / 3;
+    g.ellipse(256 + Math.cos(a) * 17, 64 + Math.sin(a) * 17, 13, 18, a, 0, Math.PI * 2);
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const cloth = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, side: THREE.DoubleSide });
+  for (const [dx, dz, ry] of [[0, -4, 0], [-4, 0, Math.PI / 2], [4, 0, Math.PI / 2]] as const) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.6, 12, 1), cloth);
+    const p = m.geometry.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 2.2) * 0.08);
+    m.geometry.computeVertexNormals();
+    m.position.set(cx + dx, terrainHeight(cx + dx, cz + dz) + 1.1, cz + dz);
+    m.rotation.y = ry;
+    m.castShadow = true;
+    scene.add(m);
+  }
+  const white = new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.9, side: THREE.DoubleSide });
+  const pole = new THREE.MeshStandardMaterial({ color: 0x2a1c10 });
+  for (const [x, z] of [[-9, -2], [-12, 4], [10, -3], [13, 5], [-6, -16], [6, -17]] as const) {
+    const h = 5;
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, h), pole);
+    stick.position.set(x, terrainHeight(x, z) + h / 2, z);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 3), white);
+    flag.position.set(x + 0.37, terrainHeight(x, z) + h - 1.7, z);
+    scene.add(stick, flag);
+  }
+}
+
+function cannonPark(scene: THREE.Scene): void {
+  const ice = new THREE.Mesh(
+    new THREE.CircleGeometry(9, 40),
+    new THREE.MeshStandardMaterial({ color: 0xaac4d8, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.9 }),
+  );
+  ice.rotation.x = -Math.PI / 2;
+  ice.scale.set(1.6, 1, 1);
+  ice.position.set(-22, terrainHeight(-22, 12) + 0.25, 12);
+  scene.add(ice);
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3e5a3a, roughness: 0.8 });
+  for (const [x, z] of [[-14, -14], [-17, -12]] as const) {
+    const cart = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.7, 2.4), wood);
+    cart.position.set(x, terrainHeight(x, z) + 0.8, z);
+    cart.castShadow = true;
+    scene.add(cart);
+  }
+}
+
+const WEATHER: Record<Palette["weather"], ConstructorParameters<typeof Particles>[0]> = {
+  dust: {
+    count: 300, origin: new THREE.Vector3(0, 3, -5), spread: new THREE.Vector3(35, 3, 30),
+    velocity: new THREE.Vector3(0.6, 0.05, 0), velocityJitter: new THREE.Vector3(0.3, 0.1, 0.3),
+    life: [6, 12], size: [0.05, 0.1],
+    colorStart: new THREE.Color(2.5, 1.2, 0.5), colorEnd: new THREE.Color(1.5, 0.5, 0.2), opacity: 0.8, additive: true,
+  },
+  embers: {
+    count: 200, origin: new THREE.Vector3(0, 3, -5), spread: new THREE.Vector3(35, 3, 30),
+    velocity: new THREE.Vector3(0.3, 0.4, 0), velocityJitter: new THREE.Vector3(0.3, 0.3, 0.3),
+    life: [6, 12], size: [0.05, 0.1],
+    colorStart: new THREE.Color(3, 1.2, 0.3), colorEnd: new THREE.Color(1.5, 0.3, 0.1), opacity: 0.8, additive: true,
+  },
+  rain: {
+    count: 1800, origin: new THREE.Vector3(0, 10, 0), spread: new THREE.Vector3(30, 10, 30),
+    velocity: new THREE.Vector3(-1.2, -16, 0), velocityJitter: new THREE.Vector3(0.2, 2, 0.2),
+    life: [1.2, 1.4], size: [0.03, 0.05],
+    colorStart: new THREE.Color(0.7, 0.75, 0.85), colorEnd: new THREE.Color(0.6, 0.65, 0.75), opacity: 0.55, additive: false,
+  },
+  snow: {
+    count: 1500, origin: new THREE.Vector3(0, 9, 0), spread: new THREE.Vector3(30, 9, 30),
+    velocity: new THREE.Vector3(0.6, -1.1, 0), velocityJitter: new THREE.Vector3(0.4, 0.3, 0.4),
+    life: [8, 14], size: [0.06, 0.12],
+    colorStart: new THREE.Color(1.3, 1.3, 1.35), colorEnd: new THREE.Color(1.1, 1.1, 1.2), opacity: 0.9, additive: false,
+  },
+  mist: {
+    count: 90, origin: new THREE.Vector3(0, 1.2, 5), spread: new THREE.Vector3(35, 1, 30),
+    velocity: new THREE.Vector3(0.4, 0.05, 0), velocityJitter: new THREE.Vector3(0.2, 0.05, 0.2),
+    life: [12, 20], size: [8, 14],
+    colorStart: new THREE.Color(0.8, 0.82, 0.84), colorEnd: new THREE.Color(0.7, 0.72, 0.74), opacity: 0.12, additive: false, grow: 0.8,
+  },
+};
+
+export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRenderer, era: EraId, pal: Palette): Promise<World> {
+  scene.background = new THREE.Color(pal.sky);
+  scene.fog = new THREE.FogExp2(pal.haze, pal.fog);
+  renderer.toneMappingExposure = pal.exposure;
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   const hdr = await loadHdr("/assets/hdri/qwantani_sunset_puresky.hdr");
@@ -205,16 +374,16 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   scene.environmentIntensity = 0.55;
   hdr.dispose();
 
-  const sun = new THREE.DirectionalLight(0xffb070, 3.2);
+  const sun = new THREE.DirectionalLight(pal.sun, pal.sunIntensity);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
   Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 200 });
   scene.add(sun, sun.target);
-  scene.add(new THREE.HemisphereLight(0xffc9a0, 0x2a2030, 0.5));
+  scene.add(new THREE.HemisphereLight(pal.hemiSky, pal.hemiGround, 0.5));
 
-  const [vista] = await Promise.all([buildVista(scene), buildTerrain(scene)]);
+  const [vista] = await Promise.all([buildVista(scene, pal, era === "troy"), buildTerrain(scene, pal)]);
 
   const [cliff, boulder, mossRocks, firePit, barrels, crate, shield, lantern, deadTree, fern] = await Promise.all([
     "namaqualand_cliff_01", "namaqualand_boulder_02", "rock_moss_set_01", "stone_fire_pit", "wooden_barrels_01",
@@ -255,7 +424,7 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
 
   const banners: Banner[] = [];
   for (const [x, z, h] of [[-7, -13, 6.2], [12, -28, 5], [-20, -29, 5], [4, -30, 5]] as const) {
-    const b = new Banner(0x8e1b16);
+    const b = new Banner(pal.banner);
     b.mesh.position.set(x, terrainHeight(x, z) + h, z);
     if (x !== -7 || z !== -13) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, h + 0.4), new THREE.MeshStandardMaterial({ color: 0x3b2a1c }));
@@ -276,12 +445,24 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   scatterInstanced(scene, makeGrassTuft(), 1400, inPlateau, [0.7, 1.3]);
   scatterInstanced(scene, fern, 30, inPlateau, [0.6, 1.1]);
 
-  const dust = new Particles({
-    count: 300, origin: new THREE.Vector3(0, 3, -5), spread: new THREE.Vector3(35, 3, 30),
-    velocity: new THREE.Vector3(0.6, 0.05, 0), velocityJitter: new THREE.Vector3(0.3, 0.1, 0.3),
-    life: [6, 12], size: [0.05, 0.1],
-    colorStart: new THREE.Color(2.5, 1.2, 0.5), colorEnd: new THREE.Color(1.5, 0.5, 0.2), opacity: 0.8, additive: true,
-  });
+  if (era === "alesia") {
+    stakes(scene, 22, -30, 30);
+    stakes(scene, -24, -30, -8);
+    stakes(scene, -24, 8, 30);
+    tower(scene, -14, 22.5, 6, false);
+    tower(scene, 14, 22.5, 6, false);
+  } else if (era === "orleans") {
+    wall(scene, 34, -30, 30, 5);
+    tower(scene, -12, 33, 9, true);
+    tower(scene, 12, 33, 9, true);
+  } else if (era === "sekigahara") {
+    maku(scene, 3, -9);
+  } else if (era === "austerlitz") {
+    cannonPark(scene);
+  }
+
+  const weather = WEATHER[pal.weather];
+  const dust = new Particles({ ...weather, origin: weather.origin.clone() });
   const valleySmoke = new Particles({
     count: 60, origin: new THREE.Vector3(0, -6, CLIFF_EDGE_Z - 12), spread: new THREE.Vector3(70, 2, 8),
     velocity: new THREE.Vector3(0.8, 1.2, 0), velocityJitter: new THREE.Vector3(0.3, 0.4, 0.3),
@@ -300,6 +481,7 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
       sun.position.copy(focus).addScaledVector(sunDir, 80);
       sun.target.position.copy(focus);
       fire.update(dt, t);
+      if (pal.weather === "rain" || pal.weather === "snow") dust.points.position.set(focus.x, 0, focus.z);
       dust.update(dt);
       valleySmoke.update(dt);
       for (const b of banners) b.update(t);

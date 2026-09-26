@@ -141,9 +141,11 @@ export class GamificationManager {
   private victoryModalEl!: HTMLElement;
 
   private onRespawnCallback?: () => void;
+  private onNextEraCallback?: () => void;
 
-  constructor(onRespawn?: () => void) {
+  constructor(onRespawn?: () => void, onNextEra?: () => void) {
     this.onRespawnCallback = onRespawn;
+    this.onNextEraCallback = onNextEra;
     this.createDom();
     this.loadSavedHighscore();
     this.updateDom();
@@ -286,8 +288,9 @@ export class GamificationManager {
             <div class="v-row"><span>Bonus Maîtrise d'Armes :</span><strong id="victory-combat-bonus">+0 pts</strong></div>
           </div>
           <div class="victory-actions">
-            <button id="btn-keep-exploring" class="btn-secondary">Continuer à explorer</button>
-            <a href="index.html" class="btn-primary">Retour à la Frise du Temps</a>
+            <button id="btn-next-era" class="btn-primary" style="display: none;">🌀 Sauter vers l'Époque Suivante</button>
+            <a href="index.html" class="btn-secondary">⏳ Retour à la Frise du Temps</a>
+            <button id="btn-keep-exploring" class="btn-tertiary">Explorer le champ de bataille</button>
           </div>
         </div>
       </div>
@@ -316,6 +319,10 @@ export class GamificationManager {
     // Hook listeners
     this.container.querySelector("#journal-close")?.addEventListener("click", () => this.toggleJournal(false));
     this.container.querySelector("#btn-respawn")?.addEventListener("click", () => this.respawn());
+    this.container.querySelector("#btn-next-era")?.addEventListener("click", () => {
+      this.victoryModalEl.classList.add("hidden");
+      this.onNextEraCallback?.();
+    });
     this.container.querySelector("#btn-keep-exploring")?.addEventListener("click", () => {
       this.victoryModalEl.classList.add("hidden");
     });
@@ -484,12 +491,16 @@ export class GamificationManager {
   /** Award points and effects when Achilles trust increases */
   registerTrustGain(amount: number): void {
     this.stats.trustGained += amount;
-    this.addPoints(amount * 12, `Confiance d'Achille (+${amount})`, { color: "green" });
+    this.addPoints(amount * 12, `Confiance acquise (+${amount})`, { color: "green" });
     this.unlockAchievement("first_contact");
     if (amount > 10) {
       this.unlockAchievement("hero_speech");
     }
     this.addStability(amount * 0.7);
+  }
+
+  addTrust(amount: number): void {
+    this.registerTrustGain(amount);
   }
 
   /** Award points and effects when war breaks out */
@@ -660,6 +671,25 @@ export class GamificationManager {
     this.container.querySelector("#game-over-score")!.textContent = `${this.score.toLocaleString()} pts`;
     this.container.querySelector("#game-over-kills")!.textContent = String(this.stats.enemiesDefeated);
     this.gameOverModalEl.classList.remove("hidden");
+  }
+
+  setNextEraCallback(cb: () => void, nextTitle = "Époque Suivante"): void {
+    this.onNextEraCallback = cb;
+    const btn = this.container.querySelector("#btn-next-era") as HTMLButtonElement | null;
+    if (btn) {
+      btn.style.display = "inline-flex";
+      btn.textContent = `🌀 Sauter vers ${nextTitle}`;
+    }
+  }
+
+  setVictorySub(text: string): void {
+    const sub = this.container.querySelector(".victory-sub");
+    if (sub) sub.textContent = text;
+  }
+
+  showVictory(subText?: string): void {
+    if (subText) this.setVictorySub(subText);
+    this.triggerVictory();
   }
 
   private triggerVictory(): void {

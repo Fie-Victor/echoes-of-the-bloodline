@@ -34,6 +34,7 @@ export class Character {
   private current: Anim = "Idle";
   private bones: Record<string, THREE.Bone> = {};
   attack = 0;
+  flinch = 0;
 
   constructor(gltf: GLTF, skin: Record<"body" | "head", THREE.Material>) {
     this.model = SkeletonUtils.clone(gltf.scene);
@@ -86,6 +87,12 @@ export class Character {
       this.bones.R_UpperArm.rotateZ(k * 1.1);
       this.bones.R_Forearm.rotateZ(k * 0.6);
       this.attack = Math.max(0, this.attack - dt);
+    }
+    if (this.flinch > 0) {
+      const k = Math.sin((this.flinch / 0.3) * Math.PI);
+      this.bones.Spine1.rotateZ(k * 0.35);
+      this.bones.Head.rotateZ(k * 0.25);
+      this.flinch = Math.max(0, this.flinch - dt);
     }
   }
 }

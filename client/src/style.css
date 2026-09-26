@@ -671,3 +671,116 @@ canvas {
     padding: 4px 8px;
   }
 }
+
+/* Multi-era navigation & Battle HUD */
+.timeline-btn {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-family: Cinzel, serif;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: #f6e7c4;
+  background: rgba(14, 18, 25, 0.85);
+  border: 1px solid rgba(217, 179, 108, 0.4);
+  border-radius: 4px;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: all 0.25s ease;
+}
+.timeline-btn:hover {
+  border-color: #d9b36c;
+  background: rgba(217, 179, 108, 0.2);
+  transform: translateY(-1px);
+}
+
+#eras { margin-top: 14px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#eras a { font-family: Cinzel, serif; font-size: 12px; letter-spacing: 1.5px; color: #d9b36c; text-decoration: none; padding: 5px 10px; border: 1px solid #d9b36c44; background: rgba(0,0,0,.45); border-radius: 4px; transition: all .2s; }
+#eras a:hover, #eras a.current { border-color: #d9b36c; color: #f6e7c4; background: rgba(217,179,108,.25); }
+
+#comms { position: fixed; top: 18px; right: 22px; width: min(420px, 44vw); background: linear-gradient(180deg, rgba(0,30,40,.82), rgba(0,18,24,.92)); border: 1px solid #6ff8; box-shadow: 0 0 22px #0ff3; padding: 12px 14px; z-index: 30; border-radius: 8px; }
+.comms-head { font-size: 11px; letter-spacing: 3px; color: #8ff; margin-bottom: 8px; }
+#comms-text { font-size: 15px; line-height: 1.45; color: #e6fbff; }
+#comms-choices { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+#comms-choices button { text-align: left; font: inherit; font-size: 14px; color: #f6e7c4; background: rgba(0,0,0,.45); border: 1px solid #d9b36c55; padding: 8px 12px; cursor: pointer; border-radius: 4px; transition: all .2s; }
+#comms-choices button:hover { border-color: #d9b36c; background: rgba(217,179,108,.25); }
+
+#battle-hud { position: fixed; top: 16px; left: 0; right: 0; margin: 0 auto; width: min(520px, 50vw); pointer-events: none; text-shadow: 0 1px 3px #000; font-size: 12px; letter-spacing: 1px; z-index: 25; }
+#battle-hud .army { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+#battle-hud .army span { width: 190px; text-align: right; color: #f3d38a; font-family: Cinzel, serif; }
+#battle-hud .bar { flex: 1; height: 8px; background: rgba(255,255,255,.15); border: 1px solid #0008; border-radius: 4px; overflow: hidden; }
+#battle-hud .bar div { height: 100%; transition: width .3s; }
+#ally-bar { background: linear-gradient(90deg, #d9b36c, #f6e7c4); width: 100%; }
+#enemy-bar { background: linear-gradient(90deg, #7a1410, #d33); width: 100%; }
+#player-hp { position: fixed; left: 22px; bottom: 22px; width: 260px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; z-index: 25; }
+#player-hp .bar { flex: 1; height: 8px; background: rgba(0,0,0,.6); border: 1px solid #d9b36c44; border-radius: 4px; overflow: hidden; }
+#hp-bar { background: linear-gradient(90deg, #8b0000, #e04030); height: 100%; width: 100%; transition: width .2s; }
+#ammo { width: 100%; color: #e6fbff; font-size: 12px; letter-spacing: 1px; }
+#hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(140,0,0,.85)); z-index: 20; transition: opacity .25s ease-out; }
+
+/* Temporal Jump Portal Prompt */
+.portal-prompt {
+  position: fixed;
+  bottom: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 20, 30, 0.9);
+  border: 1px solid #66ffff;
+  box-shadow: 0 0 25px rgba(102, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 35;
+  animation: pulse-glow 2s infinite alternate;
+}
+@keyframes pulse-glow {
+  from { box-shadow: 0 0 15px rgba(102, 255, 255, 0.3); }
+  to { box-shadow: 0 0 35px rgba(102, 255, 255, 0.7); }
+}
+.portal-prompt-text {
+  font-family: Cinzel, serif;
+  font-size: 16px;
+  color: #66ffff;
+  letter-spacing: 2px;
+}
+.portal-actions {
+  display: flex;
+  gap: 12px;
+}
+.portal-btn {
+  font-family: Inter, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all .2s;
+}
+.portal-btn-jump {
+  background: linear-gradient(135deg, #00b4db, #0083b0);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 180, 219, 0.4);
+}
+.portal-btn-jump:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0, 180, 219, 0.6);
+}
+.portal-btn-timeline {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f6e7c4;
+  border: 1px solid rgba(217, 179, 108, 0.5);
+}
+.portal-btn-timeline:hover {
+  background: rgba(217, 179, 108, 0.2);
+}
+

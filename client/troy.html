@@ -19,13 +19,35 @@
         <button id="start" class="hidden">Entrer dans l'époque</button>
       </div>
     </div>
+    <a href="index.html" id="timeline-btn" class="timeline-btn" title="Retourner à la frise temporelle">⏳ Frise du Temps</a>
     <div id="crosshair"></div>
     <div id="hud">
       <div id="title">ÉCHOS DE LA LIGNÉE — Troie, 1200 av. J.-C.</div>
       <div id="objective">Objectif : gagner la confiance d'Achille.</div>
       <div id="stats"></div>
-      <div id="help">ZQSD/WASD bouger · Shift courir · Espace esquiver · Clic attaquer · Souris caméra · E parler · T Astra · V micro · TAB Journal & Stats · B Bataille</div>
+      <nav id="eras"></nav>
+      <div id="help">ZQSD/WASD bouger · Shift courir · Espace esquiver · Clic attaquer · Clic droit tirer/lancer · E parler · T Astra · V micro · TAB Journal & Stats · B Bataille</div>
     </div>
+    <div id="comms" class="hidden">
+      <div class="comms-head">COMMUNICATION TEMPORELLE // ASTRA</div>
+      <div id="comms-text"></div>
+      <div id="comms-choices"></div>
+    </div>
+    <div id="battle-hud" class="hidden">
+      <div class="army">
+        <span id="ally-label">Alliés</span>
+        <div class="bar"><div id="ally-bar"></div></div>
+      </div>
+      <div class="army">
+        <span id="enemy-label">Ennemis</span>
+        <div class="bar"><div id="enemy-bar"></div></div>
+      </div>
+    </div>
+    <div id="player-hp">
+      <div class="bar"><div id="hp-bar"></div></div>
+      <div id="ammo"></div>
+    </div>
+    <div id="hurt"></div>
     <div id="prompt" class="hidden">[E] Parler à Achille</div>
     <div id="bubble" class="hidden"></div>
     <div id="combat-banner" class="hidden"></div>

@@ -6,6 +6,10 @@ const KEY = process.env.GRADIUM_API_KEY;
 
 export const VOICES: Record<string, string> = {
   achilles_01: process.env.GRADIUM_VOICE_ACHILLES ?? "7HhpTMy55D4HkXen", // Vianney: deep, resonant
+  caesar_01: process.env.GRADIUM_VOICE_CAESAR ?? "7HhpTMy55D4HkXen",
+  jeanne_01: process.env.GRADIUM_VOICE_JEANNE ?? "b-1LP0pKWL1tNgml",
+  ieyasu_01: process.env.GRADIUM_VOICE_IEYASU ?? "7HhpTMy55D4HkXen",
+  napoleon_01: process.env.GRADIUM_VOICE_NAPOLEON ?? "7HhpTMy55D4HkXen",
   astra: process.env.GRADIUM_VOICE_ASTRA ?? "b-1LP0pKWL1tNgml", // Albane: precise, clinical
 };
 

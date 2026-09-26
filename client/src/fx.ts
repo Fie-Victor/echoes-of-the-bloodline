@@ -145,3 +145,85 @@ export class Campfire {
     this.light.intensity = 22 + Math.sin(t * 13) * 3 + Math.sin(t * 7.3) * 4 + Math.random() * 2;
   }
 }
+
+interface BurstOptions {
+  max: number;
+  colorStart: THREE.Color;
+  colorEnd: THREE.Color;
+  opacity: number;
+  additive: boolean;
+  gravity: number;
+  drag: number;
+  grow?: number;
+}
+
+/** Pooled one-shot particles (blood spray, powder smoke, muzzle flashes, dirt): `emit` recycles the oldest slots. */
+export class Bursts {
+  readonly points: THREE.Points;
+  private pos: Float32Array;
+  private vel: Float32Array;
+  private age: Float32Array;
+  private life: Float32Array;
+  private size: Float32Array;
+  private next = 0;
+
+  constructor(private o: BurstOptions) {
+    const geo = new THREE.BufferGeometry();
+    this.pos = new Float32Array(o.max * 3);
+    this.vel = new Float32Array(o.max * 3);
+    this.age = new Float32Array(o.max).fill(1);
+    this.life = new Float32Array(o.max).fill(1);
+    this.size = new Float32Array(o.max);
+    geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
+    geo.setAttribute("aAge", new THREE.BufferAttribute(this.age, 1));
+    geo.setAttribute("aSize", new THREE.BufferAttribute(this.size, 1));
+    this.points = new THREE.Points(
+      geo,
+      new THREE.ShaderMaterial({
+        vertexShader: VERT,
+        fragmentShader: FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+        uniforms: {
+          uMap: { value: getSoftParticleTexture() },
+          uColorStart: { value: o.colorStart },
+          uColorEnd: { value: o.colorEnd },
+          uOpacity: { value: o.opacity },
+          uGrow: { value: o.grow ?? 0 },
+        },
+      }),
+    );
+    this.points.frustumCulled = false;
+  }
+
+  emit(at: THREE.Vector3, count: number, dir: THREE.Vector3, jitter: number, life: [number, number], size: [number, number]): void {
+    const r = () => Math.random() * 2 - 1;
+    for (let n = 0; n < count; n++) {
+      const i = this.next;
+      this.next = (this.next + 1) % this.o.max;
+      this.pos.set([at.x + r() * 0.05, at.y + r() * 0.05, at.z + r() * 0.05], i * 3);
+      this.vel.set([dir.x + r() * jitter, dir.y + r() * jitter, dir.z + r() * jitter], i * 3);
+      this.age[i] = 0;
+      this.life[i] = THREE.MathUtils.lerp(life[0], life[1], Math.random());
+      this.size[i] = THREE.MathUtils.lerp(size[0], size[1], Math.random());
+    }
+    this.points.geometry.attributes.aSize.needsUpdate = true;
+  }
+
+  update(dt: number, wind = 0): void {
+    const damp = Math.exp(-this.o.drag * dt);
+    for (let i = 0; i < this.o.max; i++) {
+      if (this.age[i] >= 1) continue;
+      this.age[i] = Math.min(1, this.age[i] + dt / this.life[i]);
+      this.vel[i * 3] = this.vel[i * 3] * damp + wind * dt;
+      this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * damp - this.o.gravity * dt;
+      this.vel[i * 3 + 2] *= damp;
+      this.pos[i * 3] += this.vel[i * 3] * dt;
+      this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
+      this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
+    }
+    this.points.geometry.attributes.position.needsUpdate = true;
+    this.points.geometry.attributes.aAge.needsUpdate = true;
+  }
+}
