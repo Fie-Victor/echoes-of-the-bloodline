@@ -330,7 +330,232 @@ function cannonPark(scene: THREE.Scene): void {
   }
 }
 
+// ---------- Landmarks: recognisable silhouettes on the horizon for each era ----------
+
+const matCache = new Map<number, THREE.MeshStandardMaterial>();
+function m(color: number): THREE.MeshStandardMaterial {
+  let r = matCache.get(color);
+  if (!r) matCache.set(color, (r = new THREE.MeshStandardMaterial({ color, roughness: 0.9 })));
+  return r;
+}
+
+function add(scene: THREE.Scene, geo: THREE.BufferGeometry, color: number, x: number, y: number, z: number, ry = 0): THREE.Mesh {
+  const o = new THREE.Mesh(geo, m(color));
+  o.position.set(x, y, z);
+  o.rotation.y = ry;
+  o.castShadow = o.receiveShadow = true;
+  scene.add(o);
+  return o;
+}
+
+/** A gabled house: walls plus a triangular-prism roof. */
+function house(scene: THREE.Scene, x: number, z: number, w: number, d: number, h: number, wall: number, roof: number, ry = 0, pitch = 0.8): void {
+  const y = terrainHeight(x, z) - 0.3;
+  add(scene, new THREE.BoxGeometry(w, h, d), wall, x, y + h / 2, z, ry);
+  const shape = new THREE.Shape();
+  shape.moveTo(-w / 2 - 0.3, 0);
+  shape.lineTo(0, w * pitch * 0.6);
+  shape.lineTo(w / 2 + 0.3, 0);
+  shape.lineTo(-w / 2 - 0.3, 0);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: d + 0.6, bevelEnabled: false });
+  geo.translate(0, 0, -(d + 0.6) / 2);
+  add(scene, geo, roof, x, y + h, z, ry);
+}
+
+function roundHut(scene: THREE.Scene, x: number, z: number, r: number): void {
+  const y = terrainHeight(x, z) - 0.2;
+  add(scene, new THREE.CylinderGeometry(r, r, 2, 14), 0x8a7050, x, y + 1, z);
+  add(scene, new THREE.ConeGeometry(r * 1.25, r * 1.6, 14), 0xb09a5a, x, y + 2 + r * 0.8, z);
+}
+
+function oppidum(scene: THREE.Scene, cx: number, cz: number): void {
+  // Mont Auxois: a flat-topped hill ringed by a murus gallicus (stone face over a timber lattice).
+  const base = terrainHeight(cx, cz);
+  add(scene, new THREE.CylinderGeometry(22, 34, 12, 40), 0x7a8458, cx, base + 4, cz);
+  const top = base + 10;
+  for (let i = 0; i < 44; i++) {
+    const a = (i / 44) * Math.PI * 2;
+    const seg = add(scene, new THREE.BoxGeometry(3.3, 2.4, 1.2), i % 2 ? 0x9a9080 : 0x8a806e, cx + Math.sin(a) * 21, top + 1.2, cz + Math.cos(a) * 21, a);
+    seg.rotation.y = a;
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = i * 2.4;
+    const r = 4 + (i % 4) * 4;
+    roundHutAt(scene, cx + Math.sin(a) * r, top, cz + Math.cos(a) * r, 1.6 + (i % 3) * 0.3);
+  }
+}
+
+function roundHutAt(scene: THREE.Scene, x: number, y: number, z: number, r: number): void {
+  add(scene, new THREE.CylinderGeometry(r, r, 2, 14), 0x8a7050, x, y + 1, z);
+  add(scene, new THREE.ConeGeometry(r * 1.25, r * 1.6, 14), 0xb09a5a, x, y + 2 + r * 0.8, z);
+}
+
+function aquila(scene: THREE.Scene, x: number, z: number): void {
+  const y = terrainHeight(x, z);
+  add(scene, new THREE.CylinderGeometry(0.04, 0.05, 3.2, 8), 0x5a3a22, x, y + 1.6, z);
+  const gold = 0xd4a93a;
+  add(scene, new THREE.BoxGeometry(0.9, 0.08, 0.2), gold, x, y + 3.2, z);
+  add(scene, new THREE.SphereGeometry(0.14, 10, 8), gold, x, y + 3.35, z);
+  add(scene, new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), gold, x, y + 2.6, z).rotation.x = Math.PI / 2;
+  const vex = add(scene, new THREE.PlaneGeometry(0.8, 0.9), 0x8e1b16, x, y + 2.1, z + 0.06);
+  (vex.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+}
+
+function cathedral(scene: THREE.Scene, x: number, z: number): void {
+  const y = terrainHeight(x, z) - 0.5;
+  const stone = 0xc8bfa8;
+  add(scene, new THREE.BoxGeometry(9, 14, 26), stone, x, y + 7, z + 6);
+  const roof = new THREE.Shape();
+  roof.moveTo(-5, 0);
+  roof.lineTo(0, 7);
+  roof.lineTo(5, 0);
+  roof.lineTo(-5, 0);
+  const rg = new THREE.ExtrudeGeometry(roof, { depth: 26, bevelEnabled: false });
+  rg.translate(0, 0, -13);
+  add(scene, rg, 0x4a4e58, x, y + 14, z + 6);
+  add(scene, new THREE.BoxGeometry(18, 11, 6), stone, x, y + 5.5, z + 10);
+  for (const dx of [-3.8, 3.8]) {
+    add(scene, new THREE.BoxGeometry(4.5, 26, 4.5), stone, x + dx, y + 13, z - 8.5);
+    for (const [px, pz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]] as const) {
+      add(scene, new THREE.ConeGeometry(0.35, 3, 6), stone, x + dx + px, y + 27.5, z - 8.5 + pz);
+    }
+  }
+  add(scene, new THREE.ConeGeometry(1.2, 14, 8), 0x5a5e68, x, y + 28, z + 10);
+  const rose = add(scene, new THREE.CircleGeometry(1.8, 20), 0x2a3a6a, x, y + 16, z - 10.8);
+  rose.rotation.y = Math.PI;
+}
+
+function tenshu(scene: THREE.Scene, x: number, z: number): void {
+  // Castle keep: battered stone base, stacked white storeys with dark hipped roofs and golden shachihoko.
+  const y = terrainHeight(x, z) - 0.5;
+  add(scene, new THREE.CylinderGeometry(9, 12, 7, 4, 1), 0x8a8478, x, y + 3.5, z, Math.PI / 4);
+  let top = y + 7;
+  for (let i = 0; i < 4; i++) {
+    const w = 11 - i * 2.4;
+    const h = 3.2;
+    add(scene, new THREE.BoxGeometry(w, h, w * 0.85), 0xd8d2c4, x, top + h / 2, z);
+    const roof = add(scene, new THREE.ConeGeometry(w * 0.85, 2.2, 4, 1, true), 0x2e343c, x, top + h + 0.7, z, Math.PI / 4);
+    roof.scale.set(1, 1, 0.85);
+    top += h + 1.2;
+  }
+  for (const dx of [-1.2, 1.2]) add(scene, new THREE.ConeGeometry(0.25, 1, 5), 0xd4a93a, x + dx, top + 0.6, z);
+}
+
+function pagoda(scene: THREE.Scene, x: number, z: number): void {
+  const y = terrainHeight(x, z) - 0.3;
+  let top = y;
+  for (let i = 0; i < 5; i++) {
+    const w = 5 - i * 0.6;
+    add(scene, new THREE.BoxGeometry(w * 0.6, 2, w * 0.6), 0x8a2a1a, x, top + 1, z);
+    add(scene, new THREE.ConeGeometry(w * 0.85, 0.9, 4, 1, true), 0x2e343c, x, top + 2.3, z, Math.PI / 4);
+    top += 2.6;
+  }
+  add(scene, new THREE.CylinderGeometry(0.1, 0.12, 4, 6), 0xb08a3c, x, top + 2, z);
+}
+
+function torii(scene: THREE.Scene, x: number, z: number, ry: number): void {
+  const y = terrainHeight(x, z);
+  const red = 0xc0321e;
+  const g = new THREE.Group();
+  for (const dx of [-1.6, 1.6]) {
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 4, 10), m(red));
+    post.position.set(dx, 2, 0);
+    g.add(post);
+  }
+  const kasagi = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.32, 0.45), m(0x1a1a1a));
+  kasagi.position.y = 4.1;
+  const nuki = new THREE.Mesh(new THREE.BoxGeometry(4, 0.22, 0.25), m(red));
+  nuki.position.y = 3.4;
+  g.add(kasagi, nuki);
+  g.traverse((o) => (o.castShadow = true));
+  g.position.set(x, y, z);
+  g.rotation.y = ry;
+  scene.add(g);
+}
+
+function onionChurch(scene: THREE.Scene, x: number, z: number): void {
+  const y = terrainHeight(x, z) - 0.4;
+  add(scene, new THREE.BoxGeometry(7, 8, 14), 0xdcd4c0, x, y + 4, z);
+  const roof = new THREE.Shape();
+  roof.moveTo(-4, 0);
+  roof.lineTo(0, 3.5);
+  roof.lineTo(4, 0);
+  roof.lineTo(-4, 0);
+  const rg = new THREE.ExtrudeGeometry(roof, { depth: 14, bevelEnabled: false });
+  rg.translate(0, 0, -7);
+  add(scene, rg, 0x8a3a24, x, y + 8, z);
+  add(scene, new THREE.BoxGeometry(3.6, 16, 3.6), 0xdcd4c0, x, y + 8, z - 8.5);
+  const dome = add(scene, new THREE.SphereGeometry(1.9, 16, 12), 0x3a5a48, x, y + 17.4, z - 8.5);
+  dome.scale.set(1, 1.1, 1);
+  add(scene, new THREE.ConeGeometry(1.1, 2.4, 16), 0x3a5a48, x, y + 19.8, z - 8.5);
+  add(scene, new THREE.BoxGeometry(0.12, 1.4, 0.12), 0xd4a93a, x, y + 21.6, z - 8.5);
+  add(scene, new THREE.BoxGeometry(0.7, 0.12, 0.12), 0xd4a93a, x, y + 21.8, z - 8.5);
+}
+
+function windmill(scene: THREE.Scene, x: number, z: number): THREE.Object3D {
+  const y = terrainHeight(x, z) - 0.3;
+  add(scene, new THREE.CylinderGeometry(1.8, 2.6, 8, 12), 0xd8d0c0, x, y + 4, z);
+  add(scene, new THREE.ConeGeometry(2.2, 2.4, 12), 0x5a4030, x, y + 9.2, z);
+  const sails = new THREE.Group();
+  for (let i = 0; i < 4; i++) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 6, 0.08), m(0xe8e0d0));
+    arm.position.y = 3.2;
+    const holder = new THREE.Group();
+    holder.rotation.z = (i * Math.PI) / 2;
+    holder.add(arm);
+    sails.add(holder);
+  }
+  sails.position.set(x, y + 8, z - 2.4);
+  sails.traverse((o) => (o.castShadow = true));
+  scene.add(sails);
+  return sails;
+}
+
+function chapel(scene: THREE.Scene, x: number, z: number): void {
+  const y = terrainHeight(x, z) - 0.3;
+  add(scene, new THREE.BoxGeometry(3, 4, 5), 0xdcd6c8, x, y + 2, z);
+  add(scene, new THREE.ConeGeometry(2.4, 2.6, 4), 0x8a3a24, x, y + 5.3, z, Math.PI / 4);
+  add(scene, new THREE.CylinderGeometry(0.8, 0.8, 3, 10), 0xdcd6c8, x, y + 5.5, z - 2);
+  add(scene, new THREE.SphereGeometry(0.9, 12, 10), 0x3a5a48, x, y + 7.5, z - 2);
+}
+
+function buildMonuments(scene: THREE.Scene, era: EraId): THREE.Object3D[] {
+  const spin: THREE.Object3D[] = [];
+  if (era === "alesia") {
+    oppidum(scene, 0, 68);
+    aquila(scene, 3.5, -3);
+    for (let i = 0; i < 6; i++) roundHut(scene, -48 + i * 5, 48 + (i % 2) * 4, 1.8);
+  } else if (era === "orleans") {
+    cathedral(scene, -6, 58);
+    const rng = (i: number) => Math.sin(i * 12.9898) * 0.5 + 0.5;
+    for (let i = 0; i < 26; i++) {
+      const x = -34 + (i % 13) * 5.4 + rng(i) * 1.5;
+      const z = 42 + Math.floor(i / 13) * 8 + rng(i + 7) * 2;
+      if (Math.abs(x + 6) < 10 && z > 48) continue;
+      house(scene, x, z, 3.6, 4.4, 4 + rng(i + 3) * 3, [0xe6dcc4, 0xd4c8a8, 0xc8b89a][i % 3], [0x6a3a2a, 0x4a4e58][i % 2], 0, 1.3);
+    }
+    tower(scene, 30, 44, 12, true);
+  } else if (era === "sekigahara") {
+    tenshu(scene, 26, 66);
+    pagoda(scene, -38, 58);
+    torii(scene, -14, -1, 0.4);
+    for (let i = 0; i < 5; i++) house(scene, -26 + i * 6, 46 + (i % 2) * 5, 5, 4, 2.6, 0x9a8a6a, 0x5a5040, 0.1, 0.5);
+  } else if (era === "austerlitz") {
+    onionChurch(scene, -22, 58);
+    for (let i = 0; i < 9; i++) house(scene, -40 + i * 5.5, 46 + (i % 3) * 3, 4, 5, 3, 0xdcd4c0, 0x9a3a24, 0.05 * i, 0.9);
+    spin.push(windmill(scene, 28, 50));
+    chapel(scene, 44, 30);
+  }
+  return spin;
+}
+
 const WEATHER: Record<Palette["weather"], ConstructorParameters<typeof Particles>[0]> = {
+  clear: {
+    count: 120, origin: new THREE.Vector3(0, 2.5, -5), spread: new THREE.Vector3(35, 2, 30),
+    velocity: new THREE.Vector3(0.4, 0.05, 0), velocityJitter: new THREE.Vector3(0.3, 0.1, 0.3),
+    life: [6, 12], size: [0.03, 0.06],
+    colorStart: new THREE.Color(1.4, 1.35, 1.1), colorEnd: new THREE.Color(1, 1, 0.9), opacity: 0.5, additive: false,
+  },
   dust: {
     count: 300, origin: new THREE.Vector3(0, 3, -5), spread: new THREE.Vector3(35, 3, 30),
     velocity: new THREE.Vector3(0.6, 0.05, 0), velocityJitter: new THREE.Vector3(0.3, 0.1, 0.3),
@@ -371,7 +596,7 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
   const pmrem = new THREE.PMREMGenerator(renderer);
   const hdr = await loadHdr("/assets/hdri/qwantani_sunset_puresky.hdr");
   scene.environment = pmrem.fromEquirectangular(hdr).texture;
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = era === "troy" ? 0.55 : 1.0;
   hdr.dispose();
 
   const sun = new THREE.DirectionalLight(pal.sun, pal.sunIntensity);
@@ -469,9 +694,11 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
     life: [10, 16], size: [25, 40],
     colorStart: new THREE.Color(0.35, 0.25, 0.2), colorEnd: new THREE.Color(0.2, 0.16, 0.14), opacity: 0.22, additive: false, grow: 1.5,
   });
-  scene.add(dust.points, valleySmoke.points);
+  scene.add(dust.points);
+  if (era === "troy") scene.add(valleySmoke.points);
+  const spinners = buildMonuments(scene, era);
 
-  const sunDir = new THREE.Vector3(-0.35, 0.28, -1).normalize();
+  const sunDir = new THREE.Vector3(...pal.sunDir).normalize();
 
   return {
     sun,
@@ -485,6 +712,7 @@ export async function buildWorld(scene: THREE.Scene, renderer: THREE.WebGLRender
       dust.update(dt);
       valleySmoke.update(dt);
       for (const b of banners) b.update(t);
+      for (const s of spinners) s.rotation.z += dt * 0.6;
     },
   };
 }

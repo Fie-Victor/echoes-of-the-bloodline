@@ -43,7 +43,7 @@ export interface Palette {
   ground: number;
   vistaTint: number;
   banner: number;
-  weather: "dust" | "rain" | "snow" | "mist" | "embers";
+  weather: "dust" | "rain" | "snow" | "mist" | "embers" | "clear";
   exposure: number;
 }
 
@@ -95,8 +95,8 @@ export const ERAS: Record<EraId, EraConfig> = {
     chapter: "Chronique II — Alésia",
     title: "Alésia, 52 av. J.-C.",
     palette: {
-      sky: 0x59616b, haze: 0x7d8288, fog: 0.014, sun: 0xfff0d8, sunIntensity: 2.4, sunDir: [0.4, 0.45, -1],
-      hemiSky: 0xcfd8e0, hemiGround: 0x3a3428, ground: 0x8c9670, vistaTint: 0x9aa4a8, banner: 0x8e1b16, weather: "mist", exposure: 1.0,
+      sky: 0x5f8fc8, haze: 0xc9d6e0, fog: 0.007, sun: 0xfff2dc, sunIntensity: 3.6, sunDir: [0.45, 1.1, -0.6],
+      hemiSky: 0xbcd4ee, hemiGround: 0x5a5038, ground: 0x9aa070, vistaTint: 0xa8c4e0, banner: 0x8e1b16, weather: "clear", exposure: 1.1,
     },
     player: { outfit: "legionary", weapon: "gladius" },
     leader: { id: "caesar_01", name: "César", outfit: "caesar", weapon: "gladius" },
@@ -170,8 +170,8 @@ export const ERAS: Record<EraId, EraConfig> = {
     chapter: "Chronique III — Orléans",
     title: "Orléans, mai 1429",
     palette: {
-      sky: 0x3a4250, haze: 0x5a6068, fog: 0.016, sun: 0xd8e0ff, sunIntensity: 1.6, sunDir: [-0.5, 0.35, -1],
-      hemiSky: 0x9aa8c0, hemiGround: 0x2a2a2a, ground: 0x707a5a, vistaTint: 0x6a7280, banner: 0x243a8a, weather: "rain", exposure: 0.95,
+      sky: 0x6a9ad6, haze: 0xd4dce4, fog: 0.006, sun: 0xfff6e6, sunIntensity: 3.8, sunDir: [-0.5, 1.2, -0.5],
+      hemiSky: 0xc4dcf4, hemiGround: 0x4e5a34, ground: 0x7e9a58, vistaTint: 0xb4cce8, banner: 0x243a8a, weather: "clear", exposure: 1.1,
     },
     player: { outfit: "french_1429", weapon: "sword" },
     leader: { id: "jeanne_01", name: "Jeanne", outfit: "jeanne", weapon: "banner" },
@@ -245,8 +245,8 @@ export const ERAS: Record<EraId, EraConfig> = {
     chapter: "Chronique IV — Sekigahara",
     title: "Sekigahara, 21 octobre 1600",
     palette: {
-      sky: 0x8a8f92, haze: 0xa4a8a8, fog: 0.03, sun: 0xfff4e0, sunIntensity: 1.3, sunDir: [0.2, 0.5, -1],
-      hemiSky: 0xdfe4e6, hemiGround: 0x3a3a30, ground: 0x7c8a5e, vistaTint: 0xb8bcbc, banner: 0xf2efe6, weather: "mist", exposure: 0.85,
+      sky: 0x86a8cc, haze: 0xd8dcdc, fog: 0.011, sun: 0xffeccc, sunIntensity: 3.2, sunDir: [0.6, 0.8, -0.8],
+      hemiSky: 0xd8e4ee, hemiGround: 0x4a4a36, ground: 0x7c8a5e, vistaTint: 0xc8d4dc, banner: 0xf2efe6, weather: "mist", exposure: 1.0,
     },
     player: { outfit: "samurai_east", weapon: "katana" },
     leader: { id: "ieyasu_01", name: "Tokugawa Ieyasu", outfit: "ieyasu", weapon: "katana" },
@@ -320,8 +320,8 @@ export const ERAS: Record<EraId, EraConfig> = {
     chapter: "Chronique V — Austerlitz",
     title: "Austerlitz, 2 décembre 1805",
     palette: {
-      sky: 0x9aa6b4, haze: 0xb8c0c8, fog: 0.018, sun: 0xffe0b0, sunIntensity: 2.2, sunDir: [0.8, 0.15, -1],
-      hemiSky: 0xdde6f0, hemiGround: 0x5a5c60, ground: 0xe0e4ea, vistaTint: 0xc8d0dc, banner: 0x1f2f6b, weather: "snow", exposure: 1.1,
+      sky: 0x5c8cd0, haze: 0xdce4ee, fog: 0.008, sun: 0xfff0d4, sunIntensity: 2.8, sunDir: [0.7, 0.7, -0.7],
+      hemiSky: 0xd4e4f8, hemiGround: 0x8a8c90, ground: 0xe8ecf2, vistaTint: 0xb8d0ec, banner: 0x1f2f6b, weather: "snow", exposure: 0.85,
     },
     player: { outfit: "french_line", weapon: "musket" },
     leader: { id: "napoleon_01", name: "Napoléon", outfit: "napoleon", weapon: "sword" },

@@ -15,7 +15,8 @@ import { Drone } from "./drone.ts";
 import { CLIFF_EDGE_Z, buildWorld, terrainHeight } from "./environment.ts";
 import { type AstraBeat, ERAS, type Squad, type Tactic } from "./eras.ts";
 import { GameSocket } from "./net.ts";
-import { dressKit } from "./outfits.ts";
+import { type OutfitId, dressKit } from "./outfits.ts";
+import { hasUniform, paintUniform } from "./uniforms.ts";
 import { playSfx } from "./sfx.ts";
 import { Microphone, VoicePlayer, audioListener, resumeAudio, speakLocal } from "./voice.ts";
 
@@ -108,6 +109,8 @@ composer.setPixelRatio(renderer.getPixelRatio());
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.5, 0.9);
 composer.addPass(bloom);
+// Bright daylight scenes (snow, whitewashed walls) would otherwise bloom into a white haze.
+if (eraId !== "troy") bloom.threshold = 1.15;
 const vignette = new ShaderPass(VignetteShader);
 vignette.uniforms.offset.value = 0.95;
 vignette.uniforms.darkness.value = 1.25;
@@ -147,16 +150,33 @@ refreshStats();
 
 async function init() {
   const troy = eraId === "troy";
-  const [world, agentGltf, achillesGltf, agentSkin, achillesSkin, aspisFace] = await Promise.all([
+  const [world, agentGltf, achillesGltf, agentSkin, achillesSkin, aspisFace, camoSkin] = await Promise.all([
     buildWorld(scene, renderer, eraId, era.palette),
     loadGltf("/assets/humans/agent.glb"),
     loadGltf("/assets/humans/achilles.glb"),
     loadHumanSkin("sm024", { body: "greek", head: "greek" }),
     loadHumanSkin("m021", { body: "hero" }),
     loadTexture("/assets/humans/aspis.jpg", true),
+    loadHumanSkin("sm024"),
   ]);
 
-  const player = new Character(agentGltf, agentSkin);
+  // Period clothing is painted onto the sm024 body; head textures alternate for a bit of variety.
+  const uniformSkins = new Map<string, Record<"body" | "head", THREE.MeshStandardMaterial>>();
+  const uniformSkin = (outfit: OutfitId, team: number, variant: number) => {
+    const key = `${outfit}:${team}:${variant}`;
+    let s = uniformSkins.get(key);
+    if (!s) {
+      const map = hasUniform(outfit) ? paintUniform(outfit, team, camoSkin.body.map!, agentSkin.body.map!) : agentSkin.body.map;
+      s = {
+        body: new THREE.MeshStandardMaterial({ map, normalMap: camoSkin.body.normalMap, roughness: 0.85 }),
+        head: variant ? camoSkin.head : agentSkin.head,
+      };
+      uniformSkins.set(key, s);
+    }
+    return s;
+  };
+
+  const player = new Character(agentGltf, troy ? agentSkin : uniformSkin(era.player.outfit, era.allies?.team ?? 0, 0));
   if (troy) {
     dressAsAgent(player, 0x33d6ff);
     const hand = player.bone("R_Hand").getWorldPosition(new THREE.Vector3());
@@ -169,7 +189,7 @@ async function init() {
   player.root.rotation.y = Math.PI;
   scene.add(player.root);
 
-  const achilles = new Character(achillesGltf, achillesSkin);
+  const achilles = troy ? new Character(achillesGltf, achillesSkin) : new Character(agentGltf, uniformSkin(era.leader.outfit, era.allies?.team ?? 0, 1));
   if (troy) {
     dressAsHoplite(achilles);
     const fore = achilles.bone("L_Forearm").getWorldPosition(new THREE.Vector3());
@@ -185,22 +205,9 @@ async function init() {
     achilles.attachTo("R_Hand", achillesSpear);
   } else dressKit(achilles, era.leader.outfit, { weapon: era.leader.weapon, team: era.allies?.team });
 
-  // Soldiers share one tinted skin per army so tunics read as uniforms from a distance.
-  const armySkins = new Map<number, Record<"body" | "head", THREE.MeshStandardMaterial>[]>();
-  const skinsFor = (team: number) => {
-    let s = armySkins.get(team);
-    if (!s) {
-      const tint = new THREE.Color(team).lerp(new THREE.Color(0xffffff), 0.7);
-      s = [agentSkin, achillesSkin].map((k) => ({ body: k.body.clone(), head: k.head }));
-      for (const k of s) k.body.color.copy(tint);
-      armySkins.set(team, s);
-    }
-    return s;
-  };
   let spawned = 0;
   const spawnSoldier = (squad: Squad, team: number): Character => {
-    const i = spawned++ % 2;
-    const c = new Character(i ? achillesGltf : agentGltf, skinsFor(team)[i]);
+    const c = new Character(agentGltf, uniformSkin(squad.outfit, team, spawned++ % 2));
     dressKit(c, squad.outfit, { weapon: squad.weapon, team });
     return c;
   };
@@ -758,6 +765,9 @@ async function init() {
   ui.loaderText.textContent = "Époque synchronisée.";
   ui.start.classList.remove("hidden");
   ui.start.addEventListener("click", () => {
+    ui.start.blur();
+    if (ui.start.disabled) return;
+    ui.start.disabled = true;
     ui.splash.classList.add("fade");
     resumeAudio();
     renderer.domElement.requestPointerLock();
