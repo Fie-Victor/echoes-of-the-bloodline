@@ -593,7 +593,14 @@ const WEATHER: Record<Palette["weather"], ConstructorParameters<typeof Particles
 };
 
 function drop(mesh: THREE.Object3D, x: number, z: number, lift: number): void {
-  mesh.position.set(x, terrainHeight(x, z) + lift, z);
+  mesh.position.set(0, 0, 0);
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  let low = terrainHeight(x, z);
+  for (const dx of [box.min.x, box.max.x]) {
+    for (const dz of [box.min.z, box.max.z]) low = Math.min(low, terrainHeight(x + dx, z + dz));
+  }
+  mesh.position.set(x, low + lift, z);
   mesh.traverse((o) => {
     if (o instanceof THREE.Mesh) {
       o.castShadow = true;
@@ -628,7 +635,7 @@ function placeLandmarks(scene: THREE.Scene, era: EraId): void {
     const neck = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.5, 0.8), wood);
     neck.position.set(0, 1.2, 1.8);
     horse.add(neck);
-    drop(horse, 18, 22, 1.5);
+    drop(horse, 18, 22, 0.75);
     scene.add(horse);
   } else if (era === "alesia") {
     const mound = new THREE.Mesh(new THREE.CylinderGeometry(7, 9, 3.2, 8), new THREE.MeshStandardMaterial({ color: 0x8a8a62, roughness: 1 }));

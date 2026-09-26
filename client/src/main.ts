@@ -678,7 +678,7 @@ async function init() {
           return;
         }
         game.playerKills++;
-        gamification.addPoints(150, "Enemy down!");
+        gamification.registerKill();
         gamification.registerAttackHit();
         const left = KILLS_TO_PASS - game.playerKills;
         if (left === 2) astraLine("One down. Two to go. I am right behind you.");
