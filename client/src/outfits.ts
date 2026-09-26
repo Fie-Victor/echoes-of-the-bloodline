@@ -416,18 +416,28 @@ function shako(c: Character, plume: number): void {
   c.attachTo("Head", g);
 }
 
-function bicorne(c: Character): void {
+function bicorne(c: Character, sideways: boolean): void {
   const head = at(c, "Head");
   const shape = new THREE.Shape();
   shape.moveTo(-0.26, 0);
   shape.quadraticCurveTo(0, 0.34, 0.26, 0);
   shape.lineTo(-0.26, 0);
   const hat = mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.13, bevelEnabled: true, bevelSize: 0.015, bevelThickness: 0.02, bevelSegments: 2 }), mat(0x0d0d0f, 0.6));
-  hat.position.set(head.x, head.y + 0.1, head.z - 0.065);
+  const g = new THREE.Group();
+  hat.position.set(0, 0, -0.065);
   const cockade = mesh(new THREE.CircleGeometry(0.03, 12), mat(0x2c49a8));
-  cockade.position.set(head.x - 0.16, head.y + 0.16, head.z + 0.075);
-  c.attachTo("Head", hat);
-  c.attachTo("Head", cockade);
+  cockade.position.set(-0.16, 0.06, 0.075);
+  g.add(hat, cockade);
+  if (!sideways) {
+    // Line infantry wore it "en colonne", points front and back, with a red pompom.
+    g.rotation.y = Math.PI / 2;
+    const pom = mesh(new THREE.SphereGeometry(0.03, 8, 6), mat(0xb0201a));
+    pom.position.set(0, 0.2, 0);
+    g.add(pom);
+    g.scale.setScalar(0.85);
+  }
+  g.position.set(head.x, head.y + 0.1, head.z);
+  c.attachTo("Head", g);
 }
 
 function kettleHat(c: Character): void {
@@ -444,6 +454,136 @@ function sallet(c: Character, plume: number | null): void {
     p.scale.set(1, 2.5, 1);
     p.position.set(0, 0.16, -0.05);
     h.add(p);
+  }
+}
+
+function gaulHair(c: Character, color: number): void {
+  const head = at(c, "Head");
+  const m = mat(color, 1);
+  const hair = mesh(new THREE.SphereGeometry(0.128, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), m);
+  hair.scale.set(1, 1, 1.15);
+  hair.position.set(head.x, head.y + 0.08, head.z - 0.02);
+  const tail = mesh(new THREE.BoxGeometry(0.2, 0.16, 0.05), m);
+  tail.position.set(head.x, head.y - 0.02, head.z - 0.12);
+  const moustache = mesh(new THREE.BoxGeometry(0.1, 0.02, 0.02), m);
+  moustache.position.set(head.x, head.y - 0.03, head.z + 0.115);
+  for (const o of [hair, tail, moustache]) c.attachTo("Head", o);
+  for (const side of [-1, 1]) {
+    const end = mesh(new THREE.BoxGeometry(0.015, 0.06, 0.015), m);
+    end.position.set(head.x + side * 0.055, head.y - 0.06, head.z + 0.11);
+    c.attachTo("Head", end);
+  }
+}
+
+function balteus(c: Character): void {
+  const chest = at(c, "Spine2");
+  const belt = mesh(new THREE.BoxGeometry(0.04, 0.55, 0.01), leather());
+  belt.position.set(chest.x, chest.y - 0.12, chest.z + 0.16);
+  belt.rotation.z = -0.6;
+  c.attachTo("Spine2", belt);
+}
+
+function quiver(c: Character): void {
+  const chest = at(c, "Spine2");
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.55, 8), leather()));
+  const fletch = mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 8), mat(0xe6e0d0));
+  fletch.position.y = 0.3;
+  g.add(fletch);
+  g.position.set(chest.x - 0.08, chest.y - 0.05, chest.z - 0.16);
+  g.rotation.z = 0.35;
+  c.attachTo("Spine2", g);
+}
+
+let crossTex: THREE.CanvasTexture | null = null;
+function surcoat(c: Character, color: number, emblem: "cross" | "fleur" | null): void {
+  if (!emblem) return;
+  const chest = at(c, "Spine2");
+  let map: THREE.CanvasTexture | null = null;
+  if (emblem === "cross") {
+    if (!crossTex) {
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 64;
+      const g = cv.getContext("2d")!;
+      g.fillStyle = "#e6e0d0";
+      g.fillRect(0, 0, 64, 64);
+      g.fillStyle = "#b0201a";
+      g.fillRect(26, 0, 12, 64);
+      g.fillRect(0, 20, 64, 12);
+      crossTex = new THREE.CanvasTexture(cv);
+      crossTex.colorSpace = THREE.SRGBColorSpace;
+    }
+    map = crossTex;
+  }
+  const m = map ? new THREE.MeshStandardMaterial({ map, roughness: 0.95 }) : bannerCloth(color);
+  for (const [dz, ry] of [[0.2, 0], [-0.2, Math.PI]] as const) {
+    const p = mesh(new THREE.PlaneGeometry(0.34, 0.5), m);
+    p.position.set(chest.x, chest.y - 0.12, chest.z + dz);
+    p.rotation.y = ry;
+    c.attachTo("Spine2", p);
+  }
+}
+
+function sode(c: Character, plate: THREE.Material, lace: THREE.Material): void {
+  for (const side of ["L", "R"] as const) {
+    const s = at(c, `${side}_UpperArm`);
+    const g = new THREE.Group();
+    for (let i = 0; i < 4; i++) {
+      const row = mesh(new THREE.BoxGeometry(0.03, 0.045, 0.2), i % 2 ? lace : plate);
+      row.position.y = -i * 0.045;
+      g.add(row);
+    }
+    g.position.set(s.x + (side === "L" ? 0.07 : -0.07), s.y + 0.02, s.z);
+    g.rotation.z = side === "L" ? -0.35 : 0.35;
+    c.attachTo(`${side}_UpperArm`, g);
+  }
+}
+
+function jingasa(c: Character): void {
+  const head = at(c, "Head");
+  const hat = mesh(new THREE.ConeGeometry(0.26, 0.11, 20, 1, true), mat(0x1a1612, 0.35, 0.3, THREE.DoubleSide));
+  hat.position.set(head.x, head.y + 0.15, head.z);
+  const mon = mesh(new THREE.CircleGeometry(0.035, 12), mat(0xd4a93a, 0.3, 1));
+  mon.position.set(head.x, head.y + 0.16, head.z + 0.14);
+  mon.rotation.x = -1.1;
+  c.attachTo("Head", hat);
+  c.attachTo("Head", mon);
+}
+
+function havresac(c: Character, color: number): void {
+  const chest = at(c, "Spine2");
+  const pack = mesh(new THREE.BoxGeometry(0.3, 0.3, 0.1), mat(color, 0.9));
+  pack.position.set(chest.x, chest.y - 0.08, chest.z - 0.19);
+  const roll = mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.34, 10), mat(0x3a4a6a, 0.95));
+  roll.rotation.z = Math.PI / 2;
+  roll.position.set(chest.x, chest.y + 0.1, chest.z - 0.19);
+  const cartridge = mesh(new THREE.BoxGeometry(0.16, 0.1, 0.06), mat(0x111111, 0.4));
+  const pelvis = at(c, "Pelvis");
+  cartridge.position.set(pelvis.x - 0.1, pelvis.y + 0.05, pelvis.z - 0.16);
+  c.attachTo("Spine2", pack);
+  c.attachTo("Spine2", roll);
+  c.attachTo("Pelvis", cartridge);
+}
+
+/** Napoleon's grey campaign redingote, open over the chasseur uniform, with riding boots. */
+function redingote(c: Character): void {
+  const grey = cloth(0x6f7470);
+  const chest = at(c, "Spine2");
+  const pelvis = at(c, "Pelvis");
+  const len = chest.y - pelvis.y + 0.75;
+  const geo = new THREE.CylinderGeometry(0.21, 0.29, len, 20, 1, true, Math.PI * 0.12, Math.PI * 1.76);
+  const coat = mesh(geo, grey);
+  coat.scale.z = 0.8;
+  coat.position.set(chest.x, chest.y + 0.14 - len / 2, chest.z + 0.01);
+  c.attachTo("Spine1", coat);
+  sleeves(c, grey);
+  for (const side of ["L", "R"] as const) {
+    const k = at(c, `${side}_Calf`);
+    const f = at(c, `${side}_Foot`);
+    const boot = mesh(new THREE.CylinderGeometry(0.075, 0.06, k.distanceTo(f) + 0.08, 10), mat(0x0c0c0c, 0.35));
+    boot.position.lerpVectors(k, f, 0.45);
+    boot.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), k.clone().sub(f).normalize());
+    c.attachTo(`${side}_Calf`, boot);
   }
 }
 
@@ -487,16 +627,16 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
         galea(c, 0xb0201a);
         cape(c, cloth(0x6e1410), 0.9, 0.46);
         scabbard(c, leather(), 0.5);
+        balteus(c);
         holdLeft(c, shieldMesh("scutum", team));
       }
       if (!leader || o.weapon !== "gladius") holdRight(c, o.weapon);
       return;
     }
     case "gaul": {
-      trousers(c, cloth(team));
-      sleeves(c, cloth(0x6b5634));
-      cape(c, cloth(0x4a5a2c), 0.8, 0.5);
-      if (Math.random() < 0.5) helmet(c, brass(), { scaleY: 0.9 });
+      cape(c, cloth(Math.random() < 0.5 ? 0x4a5a2c : 0x6e3a1e), 0.8, 0.5);
+      gaulHair(c, [0xb07a3a, 0x7a4a22, 0xc89a5a][Math.floor(Math.random() * 3)]);
+      if (Math.random() < 0.35) helmet(c, brass(), { scaleY: 0.9 });
       const neck = at(c, "Neck");
       const torc = mesh(new THREE.TorusGeometry(0.07, 0.012, 6, 16, Math.PI * 1.7), mat(0xd4a93a, 0.25, 1));
       torc.rotation.x = Math.PI / 2;
@@ -512,8 +652,8 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
       const knight = outfit !== "english_1429";
       const plate = outfit === "jeanne" ? mat(0xdfe3e8, 0.2, 1) : steel();
       if (outfit === "english_1429" && o.weapon === "longbow") {
-        torso(c, cloth(0x8a7a5a), { length: 1.3, widen: 1.05 });
         kettleHat(c);
+        quiver(c);
       } else {
         torso(c, plate, { widen: 1.02 });
         shoulders(c, plate, 0.11);
@@ -522,8 +662,11 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
         if (outfit === "french_1429") sallet(c, 0xe9e1cf);
         else if (outfit === "english_1429") kettleHat(c);
       }
-      const tabard = knight ? (outfit === "jeanne" ? 0xe9e1cf : 0x243a8a) : 0xb0201a;
-      skirt(c, cloth(tabard), 0.28, 0.1, 12);
+      const tabard = knight ? (outfit === "jeanne" ? 0xe9e1cf : 0x243a8a) : 0xe6e0d0;
+      if (o.weapon !== "longbow") {
+        skirt(c, cloth(tabard), 0.28, 0.1, 12);
+        surcoat(c, tabard, outfit === "english_1429" ? "cross" : outfit === "french_1429" ? "fleur" : null);
+      }
       if (outfit === "jeanne") {
         const head = at(c, "Head");
         const hair = mesh(new THREE.SphereGeometry(0.125, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.6), mat(0x2a1a10, 1));
@@ -532,7 +675,7 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
         c.attachTo("Head", hair);
         holdRight(c, "banner", 0xffffff);
       } else {
-        if (o.weapon !== "longbow" && o.weapon !== "crossbow") holdLeft(c, shieldMesh("heater", tabard));
+        if (o.weapon !== "longbow" && o.weapon !== "crossbow") holdLeft(c, shieldMesh("heater", outfit === "english_1429" ? 0xb0201a : tabard));
         if (o.weapon === "longbow") holdLeft(c, weaponMesh("longbow", 0), 0.05);
         else holdRight(c, o.weapon);
         scabbard(c, leather());
@@ -544,11 +687,11 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
     case "ieyasu": {
       const lacquer = outfit === "samurai_west" ? mat(0x3a1410, 0.4, 0.2) : mat(0x241c18, 0.4, 0.2);
       torso(c, lacquer, { bands: mat(team, 0.8) });
-      shoulders(c, lacquer, 0.13, -0.03);
+      sode(c, lacquer, mat(team, 0.8));
       skirt(c, lacquer, 0.26, 0.2, 7);
-      trousers(c, cloth(0x2c2c3a), true);
-      sleeves(c, cloth(0x2c2c3a), mat(0x1c1a18, 0.5, 0.5));
-      kabuto(c, 0xd4a93a, outfit === "ieyasu");
+      const ashigaru = o.weapon === "arquebus";
+      if (ashigaru) jingasa(c);
+      else kabuto(c, 0xd4a93a, outfit === "ieyasu");
       if (outfit === "ieyasu") {
         cape(c, cloth(0xe8e2d0), 1.0, 0.6);
         const fan = mesh(new THREE.CircleGeometry(0.18, 12, 0, Math.PI * 0.9), mat(0xd4a93a, 0.3, 1, THREE.DoubleSide));
@@ -567,19 +710,18 @@ export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
     case "napoleon":
     case "russian_line": {
       if (outfit === "napoleon") {
-        torso(c, cloth(0x6f7470), { length: 1.9, widen: 1.1 });
-        sleeves(c, cloth(0x6f7470));
-        trousers(c, mat(0xe6e0cf, 0.9), true);
-        bicorne(c);
+        redingote(c);
+        bicorne(c, true);
         return;
       }
-      const coat = outfit === "french_line" ? 0x1f2f6b : 0x2f4a2a;
-      torso(c, cloth(coat), { widen: 1.02 });
-      sleeves(c, cloth(coat), cloth(0xb0201a));
+      const french = outfit === "french_line";
+      const coat = french ? 0x1f2f6b : 0x2f4a2a;
       coatTails(c, cloth(coat), 0.4);
-      trousers(c, mat(outfit === "french_line" ? 0xe6e0cf : 0xd8d2c0, 0.9));
       crossbelts(c, mat(0xf2efe6, 0.8));
-      shako(c, outfit === "french_line" ? 0xb0201a : 0x2a2a2a);
+      havresac(c, french ? 0x6b4a2a : 0x3a2c20);
+      // French line infantry still wore the bicorne at Austerlitz; the Russians had the 1803 kiver.
+      if (french) bicorne(c, false);
+      else shako(c, 0x2a2a2a);
       holdRight(c, o.weapon);
       return;
     }

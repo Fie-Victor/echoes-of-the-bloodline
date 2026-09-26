@@ -58,7 +58,7 @@ export class GamificationManager {
     {
       id: "first_contact",
       title: "First Contact",
-      desc: "Open a dialogue with proud Achilles",
+      desc: "Open a dialogue with the leader of the age",
       icon: "💬",
       rewardPoints: 100,
       unlocked: false,
@@ -66,7 +66,7 @@ export class GamificationManager {
     {
       id: "hero_speech",
       title: "Golden Words",
-      desc: "Earn Achilles' respect (trust above 60%)",
+      desc: "Earn the leader's respect (trust above 60%)",
       icon: "🏛️",
       rewardPoints: 200,
       unlocked: false,
@@ -135,6 +135,7 @@ export class GamificationManager {
   private stabilityTextEl!: HTMLElement;
   private pointsLayerEl!: HTMLElement;
   private damageVignetteEl!: HTMLElement;
+  private vignetteTimer = 0;
   private toastContainerEl!: HTMLElement;
   private journalModalEl!: HTMLElement;
   private gameOverModalEl!: HTMLElement;
@@ -543,6 +544,8 @@ export class GamificationManager {
     this.damageVignetteEl.classList.remove("flash");
     void this.damageVignetteEl.offsetWidth; // trigger reflow
     this.damageVignetteEl.classList.add("flash");
+    clearTimeout(this.vignetteTimer);
+    this.vignetteTimer = window.setTimeout(() => this.damageVignetteEl.classList.remove("flash"), 260);
 
     // Camera shake / body effect
     document.body.classList.add("screen-shake");

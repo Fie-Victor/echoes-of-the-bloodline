@@ -43,7 +43,7 @@ export interface Palette {
   ground: number;
   vistaTint: number;
   banner: number;
-  weather: "dust" | "rain" | "snow" | "mist" | "embers";
+  weather: "dust" | "rain" | "snow" | "mist" | "embers" | "clear";
   exposure: number;
 }
 
@@ -343,7 +343,7 @@ export const ERAS: Record<EraId, EraConfig> = {
       team: 0xf2efe6,
       squads: [
         { count: 4, role: "musket", outfit: "samurai_east", weapon: "arquebus", hp: 90 },
-        { count: 8, role: "melee", outfit: "samurai_east", weapon: "yari", hp: 120 },
+        { count: 10, role: "melee", outfit: "samurai_east", weapon: "yari", hp: 130 },
       ],
     },
     enemies: {
