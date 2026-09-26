@@ -14,7 +14,8 @@ export GOOGLE_API_KEY=...   GRADIUM_API_KEY=...
 npm run dev
 ```
 
-Ouvrir http://localhost:5173, cliquer « Commencer », autoriser le micro, s'approcher d'Achille et appuyer sur E puis parler.
+Ouvrir http://localhost:5173 : page d'accueil (frise des époques). Cliquer « Commencer le voyage », écouter Astra, faire défiler les époques (molette, flèches, ou dire « gauche » / « droite ») puis entrer dans Troie (clic ou « entrer dans cette époque »).
+La scène de Troie est aussi accessible directement sur http://localhost:5173/troy.html : cliquer « Commencer », autoriser le micro, s'approcher d'Achille et appuyer sur E puis parler.
 Sans clé : IA mockée (`MOCK_AI=1`) et voix du navigateur (`MOCK_VOICE=1`).
 Production : `npm run build && npm start` (http://localhost:8787).
 
@@ -33,6 +34,8 @@ ZQSD/WASD/flèches bouger · Shift courir · Espace esquiver · Clic gauche atta
 
 ## Architecture
 
+- `client/index.html` + `client/src/home/` — page d'accueil : narration Astra (Gradium TTS + sous-titres), cartes d'époques sur une frise temporelle, commandes vocales continues (Gradium STT, socket `/ws/home`). Les époques sont déclarées dans `client/src/home/eras.ts` (`url: null` = faille instable).
+- `client/troy.html` — scène 3D de Troie.
 - `client/` — Three.js : scène de Troie, joueur TPS, PNJ Achille (state machine idle/angry/suspicious/friendly), drone Astra, overlay hologramme (iframe sandbox).
 - `server/` — Node/TS, Express + `ws` sur `/ws`.
   - `brain.ts` — appel Gemini (JSON schema = contrat §5.2), fallback mock si pas de clé / erreur / timeout.
