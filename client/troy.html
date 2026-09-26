@@ -2,10 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Échos de la Lignée</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Échos de la Lignée — Chronique de Troie</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./src/style.css" />
     <link rel="stylesheet" href="./src/gamification.css" />
   </head>
@@ -32,14 +32,21 @@
     <div id="combat-alert" class="hidden"></div>
     <div id="subtitle" class="hidden"></div>
     <div id="chat" class="hidden">
-      <div id="chat-title"></div>
+      <div class="chat-header">
+        <div id="chat-title"></div>
+        <button id="chat-close" type="button" class="chat-close-btn" aria-label="Fermer le dialogue">✕</button>
+      </div>
       <div id="chat-log"></div>
+      <div id="chat-quick-replies" class="chat-quick-replies"></div>
       <form id="chat-form">
         <input id="chat-input" autocomplete="off" placeholder="Parle à voix haute… ou écris ici (Entrée envoyer, Échap fermer)" />
         <button id="mic" type="button" title="Micro on/off">🎙</button>
       </form>
     </div>
-    <div id="hologram" class="hidden"><iframe id="hologram-frame" sandbox="allow-scripts"></iframe></div>
+    <div id="hologram" class="hidden">
+      <button id="hologram-close" type="button" class="hologram-close-btn" aria-label="Fermer le verrou">✕</button>
+      <iframe id="hologram-frame" sandbox="allow-scripts"></iframe>
+    </div>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

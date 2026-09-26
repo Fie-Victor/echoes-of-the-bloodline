@@ -14,6 +14,7 @@ import { CLIFF_EDGE_Z, buildWorld, terrainHeight } from "./environment.ts";
 import { TroyBattleManager, playClashSound, playDodgeSound, playWarHorn } from "./eras/index.ts";
 import { GamificationManager } from "./gamification.ts";
 import { GameSocket } from "./net.ts";
+import { TouchControls } from "./touch-controls.ts";
 import { Microphone, VoicePlayer, audioListener, resumeAudio, speakLocal } from "./voice.ts";
 
 const THINKING_FALLBACK_MS = 2000;
@@ -21,6 +22,23 @@ const TALK_RANGE = 3.5;
 const NPC_NAMES: Record<string, string> = { achilles_01: "Achille", astra: "Astra" };
 const STATE_LABELS: Record<NpcState, string> = { idle: "Neutre", friendly: "Amical", suspicious: "Méfiant", angry: "Hostile" };
 const STATE_COLORS: Record<NpcState, number> = { idle: 0xd9b36c, friendly: 0x4fdc7a, suspicious: 0xf0a020, angry: 0xff3322 };
+
+const QUICK_REPLIES: Record<string, string[]> = {
+  achilles_01: [
+    "⚔️ Menons la charge ensemble !",
+    "🛡️ Les Troyens menacent les navires !",
+    "👑 Agamemnon est indigne de toi.",
+    "🏛️ J'honore ta légende et ta bravoure.",
+    "🔓 Que cache ce verrou temporel ?",
+    "🤝 Je me bats à tes côtés !",
+  ],
+  astra: [
+    "🎯 Quelle est notre mission ?",
+    "⚔️ Comment convaincre Achille ?",
+    "⚡ Analyse la brèche temporelle.",
+    "💡 Donne-moi un conseil tactique.",
+  ],
+};
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const ui = {
@@ -36,13 +54,17 @@ const ui = {
   combatAlert: $("combat-alert"),
   chat: $("chat"),
   chatTitle: $("chat-title"),
+  chatClose: $<HTMLButtonElement>("chat-close"),
+  chatQuickReplies: $("chat-quick-replies"),
   chatLog: $("chat-log"),
   chatForm: $<HTMLFormElement>("chat-form"),
   chatInput: $<HTMLInputElement>("chat-input"),
   mic: $<HTMLButtonElement>("mic"),
   subtitle: $("subtitle"),
   hologram: $("hologram"),
+  hologramClose: $<HTMLButtonElement>("hologram-close"),
   hologramFrame: $<HTMLIFrameElement>("hologram-frame"),
+  help: $("help"),
 };
 
 manager.onProgress = (_url, loaded, total) => {
@@ -162,6 +184,45 @@ async function init() {
       ui.objective.textContent = "Objectif : gagner la confiance d'Achille.";
     }
   });
+
+  // Touch Controls for Smartphone & Tablet
+  const touchControls = new TouchControls({
+    onAttack: () => {
+      if (player.attack <= 0 && !game.talkingTo) {
+        player.attack = 0.35;
+        playClashSound();
+      }
+    },
+    onDodge: () => {
+      if (dodgeTime <= 0 && !game.talkingTo) {
+        dodgeTime = 0.35;
+        playDodgeSound();
+      }
+    },
+    onTalk: (npcId) => {
+      openChat(npcId);
+    },
+    onMicStart: () => {
+      void listen("ptt");
+    },
+    onMicEnd: () => {
+      if (mic.listening) void (game.talkingTo ? listen("vad") : mic.stop());
+    },
+    onWarTrigger: () => {
+      triggerWarMode();
+    },
+    onJournalToggle: () => {
+      gamification.toggleJournal();
+    },
+    onCameraRotate: (deltaYaw, deltaPitch) => {
+      camYaw -= deltaYaw;
+      camPitch = THREE.MathUtils.clamp(camPitch + deltaPitch, -0.35, 0.9);
+    },
+  });
+
+  if (touchControls.isTouchDevice && ui.help) {
+    ui.help.textContent = "🕹️ Joystick : bouger · 👆 Glisser : caméra · ⚔️ Boutons : combat";
+  }
 
   // ---- Networking ----
   const socket = new GameSocket(onServerMessage);
@@ -326,9 +387,29 @@ async function init() {
     game.talkingTo = npcId;
     ui.chatTitle.textContent = NPC_NAMES[npcId];
     ui.chat.classList.remove("hidden");
-    document.exitPointerLock();
+    if (!touchControls.isTouchDevice) {
+      document.exitPointerLock();
+    }
     Object.keys(keys).forEach((k) => (keys[k] = false));
-    setTimeout(() => ui.chatInput.focus(), 0);
+
+    // Populate quick reply chips (essential for smartphone and fast play)
+    ui.chatQuickReplies.innerHTML = "";
+    const replies = QUICK_REPLIES[npcId] || [];
+    for (const phrase of replies) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "quick-reply-chip";
+      chip.textContent = phrase;
+      chip.addEventListener("click", () => {
+        const text = phrase.replace(/^[^\w\sÀ-ÿ]+/, "").trim();
+        talk(npcId, text);
+      });
+      ui.chatQuickReplies.appendChild(chip);
+    }
+
+    if (!touchControls.isTouchDevice) {
+      setTimeout(() => ui.chatInput.focus(), 0);
+    }
     void listen("vad");
   }
 
@@ -337,8 +418,13 @@ async function init() {
     void mic.stop();
     ui.chat.classList.add("hidden");
     ui.chatInput.blur();
-    renderer.domElement.requestPointerLock();
+    if (!touchControls.isTouchDevice) {
+      renderer.domElement.requestPointerLock();
+    }
   }
+
+  ui.chatClose?.addEventListener("click", () => closeChat());
+  ui.hologramClose?.addEventListener("click", () => ui.hologram.classList.add("hidden"));
 
   ui.chatForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -485,13 +571,16 @@ async function init() {
 
   function update(dt: number, t: number): void {
     const p = player.root.position;
-    const forward = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-    const strafe = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+    const touchIn = touchControls.getMoveInput();
+    const kForward = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+    const kStrafe = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+    const forward = Math.abs(touchIn.forward) > 0.05 ? touchIn.forward : kForward;
+    const strafe = Math.abs(touchIn.strafe) > 0.05 ? touchIn.strafe : kStrafe;
     move.set(-strafe, 0, forward);
     const moving = move.lengthSq() > 0 || dodgeTime > 0;
     if (move.lengthSq() > 0) {
       move.normalize().applyAxisAngle(up, camYaw);
-      const run = keys.ShiftLeft || keys.ShiftRight;
+      const run = keys.ShiftLeft || keys.ShiftRight || touchIn.run;
       const speed = (run ? 5 : 1.8) * (dodgeTime > 0 ? 2.8 : 1);
       p.addScaledVector(move, speed * dt);
       faceTowards(player.root, Math.atan2(move.x, move.z), 10, dt);
@@ -546,7 +635,9 @@ async function init() {
     astra.update(dt, t, player.root, near ? headPos : camera.position);
     if (portal) portal.rotation.z = t * 1.5;
 
-    ui.prompt.classList.toggle("hidden", p.distanceTo(a.position) >= TALK_RANGE || game.talkingTo !== null || game.warActive);
+    const canTalk = p.distanceTo(a.position) < TALK_RANGE && game.talkingTo === null && !game.warActive;
+    ui.prompt.classList.toggle("hidden", !canTalk);
+    touchControls.setTalkVisible(canTalk, "Parler à Achille");
 
     // Companion proactive conversation when idle
     if (!game.warActive && !game.talkingTo && !voices.isSpeaking()) {
@@ -611,7 +702,9 @@ async function init() {
   ui.start.addEventListener("click", () => {
     ui.splash.classList.add("fade");
     resumeAudio();
-    renderer.domElement.requestPointerLock();
+    if (!touchControls.isTouchDevice) {
+      renderer.domElement.requestPointerLock();
+    }
     gamification.addPoints(100, "Synchronisation Troie (-1184)", { color: "gold" });
     logLine("sys", "Astra : Agent, nous sommes en 1184 av. J.-C. Achille est près du feu. Évitez tout anachronisme.");
     say("astra", "Agent, nous sommes à Troie. Achille est près du feu. Évitez tout anachronisme. Maintenez V pour me parler.");
