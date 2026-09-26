@@ -17,13 +17,32 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: linear-gradient(90deg, #f7e2ad, var(--era-accent), #f7e2ad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand p { margin: 4px 0 0; color: var(--muted); font-style: italic; font-size: 17px; }
 
+.high-score-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  background: rgba(18, 14, 10, 0.75);
+  border: 1px solid rgba(217, 179, 108, 0.45);
+  box-shadow: 0 0 16px rgba(217, 179, 108, 0.25);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-family: Cinzel, serif;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #f6e7c4;
+}
+.high-score-banner.hidden { display: none !important; }
+.high-score-banner strong { color: #ffd700; font-weight: 700; text-shadow: 0 0 8px #ffaa00; }
+
 /* ---------- cards ---------- */
-#stage { position: relative; perspective: 1400px; min-height: 0; }
-#cards { position: absolute; inset: 0; transform-style: preserve-3d; }
+#stage { position: relative; perspective: 1400px; min-height: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+#cards { position: absolute; inset: 0; transform-style: preserve-3d; touch-action: none; }
 .card {
   position: absolute; left: 50%; top: 50%;
-  width: clamp(230px, 22vw, 330px); aspect-ratio: 3 / 4.25; max-height: 92%;
+  width: clamp(220px, 24vw, 330px); aspect-ratio: 3 / 4.25; max-height: 92%;
   border-radius: 18px; overflow: hidden; cursor: pointer;
+  touch-action: none;
   transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s, filter 0.6s, box-shadow 0.6s;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   background: #15131c;
@@ -120,3 +139,26 @@ body.warping #app > :not(#stage) { opacity: 0; transition: opacity 0.8s; }
 @keyframes flash { 0% { background-color: rgba(255, 245, 225, 0); } 75% { background-color: rgba(255, 245, 225, 0); } 100% { background-color: rgba(255, 245, 225, 1); } }
 
 @media (max-height: 720px) { .card.focused .conflict { max-height: 70px; font-size: 14px; } .brand p { display: none; } }
+
+@media (max-width: 680px) {
+  .brand { padding: 12px 10px 0; }
+  .brand h1 { font-size: 22px; }
+  .brand p { font-size: 14px; }
+  .card { width: clamp(210px, 68vw, 290px); }
+  .card .body { padding: 14px 16px 16px; }
+  .card h2 { font-size: 24px; }
+  .card h3 { font-size: 16px; }
+  .card .conflict { font-size: 13px; max-height: 60px; }
+  .nav { width: 42px; height: 42px; font-size: 24px; }
+  .nav.prev { left: 8px; }
+  .nav.next { right: 8px; }
+  #timeline { margin: 0 10px; height: 58px; }
+  .node .lbl { font-size: 10px; }
+  .node .plc { display: none; }
+  #hud { padding: 4px 8px 12px; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .astra { min-height: 52px; padding: 6px 10px; }
+  .astra-orb { width: 40px; height: 40px; }
+  .astra-orb canvas { width: 40px; height: 40px; }
+  #subtitle { font-size: 14px; }
+  .mic { padding: 6px 12px; font-size: 13px; }
+}

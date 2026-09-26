@@ -34,6 +34,7 @@ interface Projectile {
   kind: Missile;
   life: number;
   stuck: boolean;
+  byPlayer?: boolean;
 }
 
 export interface BattleHooks {
@@ -42,6 +43,8 @@ export interface BattleHooks {
   playerHit(damage: number, from: THREE.Vector3): void;
   shake(amount: number): void;
   finished(victory: boolean): void;
+  onEnemyKilled?(killer: "player" | "ally", pos: THREE.Vector3): void;
+  onPlayerStrikeHit?(pos: THREE.Vector3, damage: number): void;
 }
 
 const RANGE: Record<UnitRole, number> = { melee: 1.4, javelin: 16, archer: 42, musket: 38, cannon: 60 };
@@ -133,8 +136,8 @@ export class Battle {
   ) {
     this.group.add(this.blood.points, this.smoke.points, this.flash.points, this.dirt.points, this.flashLight);
     scene.add(this.group);
-    this.deploy(allies, 0, 9);
-    this.deploy(enemies, 1, 27);
+    this.deploy(allies, 0, 3);
+    this.deploy(enemies, 1, 14);
   }
 
   private deploy(army: ArmyConfig, team: 0 | 1, z: number): void {
@@ -205,14 +208,17 @@ export class Battle {
     return best;
   }
 
-  private damage(u: Unit, amount: number, from: THREE.Vector3): void {
+  private damage(u: Unit, amount: number, from: THREE.Vector3, byPlayer = false): void {
     if (!u.alive) return;
     u.hp -= amount;
     const at = this.tmp.copy(this.pos(u)).setY(this.pos(u).y + CHEST);
     const away = this.tmp2.subVectors(this.pos(u), from).setY(0).normalize();
     this.blood.emit(at, 14 + Math.floor(amount / 3), away.multiplyScalar(2).setY(1.5), 1.4, [0.4, 0.9], [0.05, 0.12]);
     if (u.c) u.c.flinch = 0.3;
-    if (u.hp <= 0) this.kill(u, away);
+    if (u.hp <= 0) {
+      if (u.team === 1) this.hooks.onEnemyKilled?.(byPlayer ? "player" : "ally", this.pos(u));
+      this.kill(u, away);
+    }
   }
 
   private kill(u: Unit, away: THREE.Vector3): void {
@@ -236,7 +242,7 @@ export class Battle {
     this.flashLight.intensity = big ? 90 : 25;
   }
 
-  private throwMissile(from: THREE.Vector3, target: THREE.Vector3, kind: Missile, team: 0 | 1, spread: number): void {
+  private throwMissile(from: THREE.Vector3, target: THREE.Vector3, kind: Missile, team: 0 | 1, spread: number, byPlayer = false): void {
     const aim = this.tmp.copy(target).add(new THREE.Vector3((Math.random() - 0.5) * spread, 0, (Math.random() - 0.5) * spread));
     const dist = from.distanceTo(aim);
     const T = kind === "javelin" ? 0.5 + dist * 0.06 : kind === "ball" ? 0.8 + dist * 0.035 : 0.6 + dist * 0.045;
@@ -245,7 +251,7 @@ export class Battle {
     const mesh = makeMissile(kind);
     mesh.position.copy(from);
     this.group.add(mesh);
-    this.projectiles.push({ mesh, vel, team, kind, life: 30, stuck: false });
+    this.projectiles.push({ mesh, vel, team, kind, life: 30, stuck: false, byPlayer });
   }
 
   /** Musket/arquebus shot: instant, inaccurate, lethal. */
@@ -295,7 +301,10 @@ export class Battle {
     if (!target) return false;
     const parried = Math.random() < (target.fleeing ? 0 : 0.2);
     playSfx(parried ? "clash" : "hit", 1);
-    if (!parried) this.damage(target, power * (0.8 + Math.random() * 0.4), p);
+    if (!parried) {
+      this.damage(target, power * (0.8 + Math.random() * 0.4), p, true);
+      this.hooks.onPlayerStrikeHit?.(this.pos(target), power);
+    }
     this.engaged = true;
     return true;
   }
@@ -304,13 +313,14 @@ export class Battle {
   playerShoot(from: THREE.Vector3, dir: THREE.Vector3, kind: Missile | "musket"): void {
     if (kind === "musket") {
       playSfx("musket", 0);
-      this.fire(from, dir, 0, 0.9, null, false);
+      const hit = this.fire(from, dir, 0, 0.9, null, false);
+      if (hit) this.hooks.onPlayerStrikeHit?.(this.pos(hit), 50);
       this.hooks.shake(0.15);
     } else {
       playSfx("bow", 0);
       const target = from.clone().addScaledVector(dir, kind === "javelin" ? 18 : 35);
       target.y = terrainHeight(target.x, target.z) + CHEST;
-      this.throwMissile(from, target, kind, 0, 0);
+      this.throwMissile(from, target, kind, 0, 0, true);
     }
     this.engaged = true;
   }
@@ -398,8 +408,8 @@ export class Battle {
     }
     if (Math.floor(this.elapsed / RELOAD.cannon) !== Math.floor((this.elapsed - dt) / RELOAD.cannon) && this.elapsed > 3) this.fireCannons(player);
 
-    const enemyMarch = this.elapsed > 5;
-    const allyMarch = this.tactic === "charge" ? this.elapsed > 2 : this.tactic === "flank" ? this.elapsed > 3 : this.engaged;
+    const enemyMarch = this.elapsed > 1.2;
+    const allyMarch = this.tactic === "charge" ? this.elapsed > 2 : this.tactic === "flank" ? this.elapsed > 3 : false;
     for (const u of this.units) this.think(u, dt, player, u.team === 1 ? enemyMarch : allyMarch);
     this.separate();
     this.updateProjectiles(dt, player, dodging);
@@ -443,6 +453,15 @@ export class Battle {
       return;
     }
     const face = Math.atan2(foe.pos.x - p.x, foe.pos.z - p.z);
+    if (u.team === 0 && this.tactic === "hold") {
+      this.moveTo(u, u.slot, dt, 1.2);
+      if (p.distanceTo(u.slot) < 0.4) {
+        this.turn(c.root, 0, dt, 3);
+        c.play("Idle");
+      }
+      c.update(dt);
+      return;
+    }
     const ranged = u.role !== "melee";
     if (foe.d < MELEE_REACH + 0.2 || (!ranged && foe.d < 2.2)) {
       if (!this.said.has("charge") && u.team === 1) {
@@ -467,7 +486,7 @@ export class Battle {
               this.damage(foe.unit, 18 + Math.random() * 20, from);
             } else playSfx("clash", player ? player.distanceTo(from) : 10);
           } else if (player && player.distanceTo(from) < MELEE_REACH + 0.6) {
-            if (hit && !this.dodging) this.hooks.playerHit(10 + Math.random() * 10, from);
+            if (hit && !this.dodging) this.hooks.playerHit(5 + Math.random() * 4, from);
             else playSfx("clash", 1);
           }
         }, 170);
@@ -560,7 +579,8 @@ export class Battle {
           const q = this.pos(o);
           if (Math.abs(m.x - q.x) < 0.35 && Math.abs(m.z - q.z) < 0.35 && m.y > q.y + 0.3 && m.y < q.y + 1.8) {
             if (Math.random() < 0.7) {
-              this.damage(o, lethal + Math.random() * 30, m.clone().sub(pr.vel));
+              this.damage(o, lethal + Math.random() * 30, m.clone().sub(pr.vel), Boolean(pr.byPlayer));
+              if (pr.byPlayer) this.hooks.onPlayerStrikeHit?.(q, lethal);
               pr.mesh.visible = false;
             } else playSfx("clash", player ? player.distanceTo(m) : 10);
             pr.stuck = true;
@@ -609,14 +629,18 @@ export class Battle {
       this.said.add("losing");
       this.hooks.callout("losing");
     }
-    if (e <= Math.max(1, Math.round(e0 * 0.25))) {
-      for (const u of this.units) if (u.team === 1 && u.alive) u.fleeing = true;
+    if (e0 > 0 && e === 0) {
       if (!this.said.has("rout")) {
         this.said.add("rout");
         this.hooks.callout("rout");
-        window.setTimeout(() => this.finish(true), 4000);
       }
+      this.finish(true);
     }
+  }
+
+  /** Ends the skirmish as soon as the player has done their part. */
+  victory(): void {
+    this.finish(true);
   }
 
   private finish(victory: boolean): void {

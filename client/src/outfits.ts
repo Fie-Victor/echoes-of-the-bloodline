@@ -3,6 +3,7 @@ import { type Character, makeSpear } from "./characters.ts";
 
 /** Period kits built from primitives on the Rocketbox rig (bind pose, +z forward, +x = character's left). */
 export type OutfitId =
+  | "achaean" | "trojan"
   | "legionary" | "caesar" | "gaul"
   | "french_1429" | "jeanne" | "english_1429"
   | "samurai_east" | "samurai_west" | "ieyasu"
@@ -295,7 +296,7 @@ function bannerCloth(color: number): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({ map: fleurTex, color, roughness: 0.9, side: THREE.DoubleSide });
 }
 
-function shieldMesh(kind: "scutum" | "oval" | "heater", color: number): THREE.Object3D {
+function shieldMesh(kind: "scutum" | "oval" | "heater" | "aspis", color: number): THREE.Object3D {
   const g = new THREE.Group();
   if (kind === "scutum") {
     const geo = new THREE.CylinderGeometry(0.5, 0.5, 1.05, 16, 1, true, -0.55, 1.1);
@@ -311,6 +312,12 @@ function shieldMesh(kind: "scutum" | "oval" | "heater", color: number): THREE.Ob
       g.add(r);
     }
     g.add(face, boss);
+  } else if (kind === "aspis") {
+    const face = mesh(new THREE.CircleGeometry(0.42, 20), mat(color, 0.7, 0, THREE.DoubleSide));
+    const rim = mesh(new THREE.TorusGeometry(0.4, 0.035, 8, 24), brass());
+    const boss = mesh(new THREE.SphereGeometry(0.07, 12, 8), brass());
+    boss.position.z = 0.04;
+    g.add(face, rim, boss);
   } else {
     const shape = new THREE.Shape();
     if (kind === "oval") shape.absellipse(0, 0, 0.3, 0.5, 0, Math.PI * 2, false, 0);
@@ -591,6 +598,17 @@ export interface KitOptions {
 export function dressKit(c: Character, outfit: OutfitId, o: KitOptions): void {
   const team = o.team ?? 0x8e1b16;
   switch (outfit) {
+    case "achaean":
+    case "trojan": {
+      const greek = outfit === "achaean";
+      torso(c, cloth(greek ? 0xcbb892 : 0x6a3a55), { length: 0.85, widen: 0.95 });
+      skirt(c, cloth(greek ? 0xe6dcc4 : 0x2a3a6a), 0.22, 0.16, 16);
+      cape(c, cloth(greek ? 0x8e1b16 : 0x1e3a6e), greek ? 1.05 : 0.9, 0.5);
+      galea(c, greek ? 0x8e1b16 : null);
+      holdLeft(c, shieldMesh(greek ? "aspis" : "oval", greek ? 0x8e1b16 : 0x1e3a6e));
+      holdRight(c, o.weapon, greek ? 0xc4a060 : 0x9aa0a8);
+      return;
+    }
     case "legionary":
     case "caesar": {
       const leader = outfit === "caesar";

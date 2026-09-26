@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Character, dressAsHoplite, makeAspis, makeSpear } from "../../characters.ts";
 import { terrainHeight } from "../../environment.ts";
+import type { GamificationManager } from "../../gamification.ts";
 import { playClashSound, playDodgeSound, playHitSound, playWarDrum, playWarHorn } from "./troy-audio.ts";
 
 export interface TrojanEnemy {
@@ -67,6 +68,7 @@ export class TroyBattleManager {
   startBattle(
     achillesPos: THREE.Vector3,
     onGuidance: (text: string, urgent: boolean, soundLine?: string) => void,
+    gamification?: GamificationManager,
   ): void {
     if (this.state.active) return;
     this.state.active = true;
@@ -76,6 +78,8 @@ export class TroyBattleManager {
 
     playWarHorn();
     playWarDrum(0.6);
+
+    gamification?.registerWarTriggered();
 
     // Initial alert
     onGuidance(
@@ -163,6 +167,7 @@ export class TroyBattleManager {
     playerDodging: boolean,
     achilles: Character,
     onGuidance: (text: string, urgent: boolean, soundLine?: string) => void,
+    gamification?: GamificationManager,
   ): void {
     if (!this.state.active) return;
 
@@ -252,8 +257,9 @@ export class TroyBattleManager {
         this.triggerSpark(ePos);
         enemy.state = "hurt";
         enemy.stateTimer = 0.4;
+        gamification?.registerAttackHit();
         if (enemy.hp <= 0) {
-          this.killEnemy(enemy, onGuidance);
+          this.killEnemy(enemy, onGuidance, gamification);
           continue;
         }
       }
@@ -303,8 +309,10 @@ export class TroyBattleManager {
             if (playerDodging) {
               playDodgeSound();
               onGuidance("✨ BELLE ESQUIVE ! Contre-attaque maintenant !", false);
+              gamification?.registerDodge();
             } else if (dPlayer < 2.5) {
               playHitSound();
+              gamification?.takeDamage(25, "Coup de lance troyen");
               // Screen impact flash
               document.body.style.filter = "invert(0.2) drop-shadow(0 0 10px red)";
               setTimeout(() => (document.body.style.filter = ""), 150);
@@ -350,12 +358,16 @@ export class TroyBattleManager {
     const living = this.state.enemies.filter((e) => e.alive).length;
     if (living === 0 && this.state.wave === 1) {
       this.state.wave = 2;
+      gamification?.addPoints(400, "1ère Vague Repoussée !", { color: "gold" });
+      gamification?.addStability(15);
       onGuidance("⚔️ Deuxième vague en approche ! Tiens la ligne avec Achille !", true);
       playWarHorn();
       this.spawnWave(4);
     } else if (living === 0 && this.state.wave === 2) {
       this.state.wave = 3;
       this.state.active = false;
+      gamification?.addPoints(800, "Victoire de Troie !", { color: "gold" });
+      gamification?.addStability(30);
       onGuidance(
         "🏆 VICTOIRE ! Les Troyens battent en retraite ! Achille te salue en héros !",
         true,
@@ -365,15 +377,27 @@ export class TroyBattleManager {
     }
   }
 
+  resetBattle(): void {
+    for (const enemy of this.state.enemies) {
+      this.scene.remove(enemy.character.root);
+    }
+    this.state.enemies = [];
+    this.state.active = false;
+    this.state.wave = 1;
+    this.state.totalKilled = 0;
+  }
+
   private killEnemy(
     e: TrojanEnemy,
     onGuidance: (text: string, urgent: boolean, soundLine?: string) => void,
+    gamification?: GamificationManager,
   ): void {
     e.alive = false;
     e.state = "dead";
     e.attackTelegraph.visible = false;
     e.character.play("Deny");
     this.state.totalKilled++;
+    gamification?.registerKill("Guerrier troyen");
 
     // Knockdown animation
     const rot = e.character.root.rotation;

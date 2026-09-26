@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 const page = (name: string) => fileURLToPath(new URL(`client/${name}.html`, import.meta.url));
 
 export default defineConfig({
+  base: "./",
   root: "client",
   build: {
     outDir: "../dist",

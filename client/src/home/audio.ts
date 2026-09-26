@@ -91,7 +91,8 @@ export class MicCapture {
       return "unknown";
     }
     this.ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
-    await this.ctx.audioWorklet.addModule("/pcm-worklet.js");
+    const workletUrl = new URL("pcm-worklet.js", document.baseURI || window.location.href).href;
+    await this.ctx.audioWorklet.addModule(workletUrl);
     const src = this.ctx.createMediaStreamSource(this.stream);
     const node = new AudioWorkletNode(this.ctx, "pcm-capture");
     node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {

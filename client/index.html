@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Échos de la Lignée — La Frise du Temps</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Echoes of the Bloodline — The Timeline</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
   </head>
@@ -11,17 +11,18 @@
     <canvas id="sky"></canvas>
     <div id="app">
       <header class="brand">
-        <h1>Échos de la Lignée</h1>
-        <p>Traverse les siècles. Apaise les conflits. Sauve ta lignée.</p>
+        <h1>Echoes of the Bloodline</h1>
+        <p>Cross the centuries. Settle the conflicts. Save your bloodline.</p>
+        <div id="high-score-banner" class="high-score-banner hidden"></div>
       </header>
 
-      <section id="stage" aria-label="Époques">
-        <button class="nav prev" id="prev" aria-label="Époque précédente">‹</button>
+      <section id="stage" aria-label="Eras">
+        <button class="nav prev" id="prev" aria-label="Previous era">‹</button>
         <div id="cards"></div>
-        <button class="nav next" id="next" aria-label="Époque suivante">›</button>
+        <button class="nav next" id="next" aria-label="Next era">›</button>
       </section>
 
-      <nav id="timeline" aria-label="Frise temporelle">
+      <nav id="timeline" aria-label="Timeline">
         <div class="rail"><div class="rail-glow" id="railGlow"></div></div>
         <div id="nodes"></div>
       </nav>
@@ -33,13 +34,13 @@
             <span class="who">Astra</span>
             <p id="subtitle"></p>
           </div>
-          <button id="skip" class="ghost" hidden>Passer ⏭</button>
+          <button id="skip" class="ghost" hidden>Skip ⏭</button>
         </div>
         <div id="mic" class="mic off">
           <span class="dot"></span>
-          <span id="micLabel">Micro inactif</span>
+          <span id="micLabel">Mic off</span>
           <span id="heard" class="heard"></span>
-          <button id="micToggle" class="ghost">Activer</button>
+          <button id="micToggle" class="ghost">Enable</button>
         </div>
       </footer>
     </div>
@@ -47,14 +48,14 @@
     <div id="gate">
       <div class="gate-inner">
         <div class="sigil"></div>
-        <h1>Échos de la Lignée</h1>
-        <p>Astra va te guider à travers le temps. Active le son et autorise le micro pour naviguer à la voix.</p>
-        <button id="start" class="primary">Commencer le voyage</button>
-        <small>Molette ou flèches pour défiler · clic pour entrer · ou dis « gauche », « droite », « entrer »</small>
+        <h1>Echoes of the Bloodline</h1>
+        <p>Astra will guide you through time. Turn the sound on, and allow the microphone if you want to navigate by voice.</p>
+        <button id="start" class="primary">Begin the journey</button>
+        <small>Scroll or arrow keys to browse · click to enter · or say “left”, “right”, “enter”</small>
       </div>
     </div>
 
     <div id="warp"><div class="warp-title" id="warpTitle"></div></div>
-    <script type="module" src="/src/home/home.ts"></script>
+    <script type="module" src="./src/home/home.ts"></script>
   </body>
 </html>

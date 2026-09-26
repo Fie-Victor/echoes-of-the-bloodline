@@ -26,7 +26,7 @@ const REPEAT = new Set(["repete", "repeter", "repetez", "encore", "repeat"]);
 
 /** Voice keywords sent to Gradium to bias recognition. */
 export function commandKeywords(eras: Era[]): string[] {
-  return ["gauche", "droite", "entrer", "suivant", "précédent", "vas-y", "silence", "répète", ...eras.map((e) => e.place)];
+  return ["left", "right", "enter", "next", "previous", "go", "skip", "repeat", ...eras.map((e) => e.place)];
 }
 
 /** Turns streamed STT segments into navigation commands, ignoring words Astra is currently saying (echo). */

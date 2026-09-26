@@ -250,18 +250,9 @@ export class Microphone {
   }
 
   private threshold(): number {
-    return Math.max(this.strict ? 0.09 : 0.02, this.floor * (this.strict ? 6 : 3));
+    return Math.max(this.strict ? 0.045 : 0.012, this.floor * (this.strict ? 3.2 : 2.2));
   }
 }
 
-/** Browser speech synthesis, used only when Gradium is unavailable. */
-export function speakLocal(text: string, speaker: "npc" | "astra" | "woman"): void {
-  if (!("speechSynthesis" in window)) return;
-  try {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "fr-FR";
-    u.pitch = speaker === "astra" ? 1.2 : speaker === "woman" ? 1.05 : 0.8;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
-  } catch {}
-}
+/** Kept for call sites. Browser speech synthesis sounds robotic, so narration stays on Gradium only. */
+export function speakLocal(_text: string, _speaker: "npc" | "astra"): void {}

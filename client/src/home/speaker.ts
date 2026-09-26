@@ -31,6 +31,7 @@ export class Speaker {
     this.interrupt();
     this.queue = lines.map((text) => ({ id: this.nextId++, text, chunks: [], ended: false, ok: false, shown: false }));
     for (const l of this.queue) this.send({ type: "say", id: l.id, text: l.text });
+
     return new Promise((resolve) => {
       this.finish = resolve;
     });
