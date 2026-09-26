@@ -300,7 +300,7 @@ function maku(scene: THREE.Scene, cx: number, cz: number): void {
     m.castShadow = true;
     scene.add(m);
   }
-  const white = new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.9, side: THREE.DoubleSide });
+  const white = new THREE.MeshStandardMaterial({ color: 0xcfc8b8, roughness: 0.9, side: THREE.DoubleSide });
   const pole = new THREE.MeshStandardMaterial({ color: 0x2a1c10 });
   for (const [x, z] of [[-9, -2], [-12, 4], [10, -3], [13, 5], [-6, -16], [6, -17]] as const) {
     const h = 5;
@@ -437,7 +437,7 @@ function tenshu(scene: THREE.Scene, x: number, z: number): void {
   for (let i = 0; i < 4; i++) {
     const w = 11 - i * 2.4;
     const h = 3.2;
-    add(scene, new THREE.BoxGeometry(w, h, w * 0.85), 0xd8d2c4, x, top + h / 2, z);
+    add(scene, new THREE.BoxGeometry(w, h, w * 0.85), 0xb8b0a0, x, top + h / 2, z);
     const roof = add(scene, new THREE.ConeGeometry(w * 0.85, 2.2, 4, 1, true), 0x2e343c, x, top + h + 0.7, z, Math.PI / 4);
     roof.scale.set(1, 1, 0.85);
     top += h + 1.2;
@@ -479,7 +479,7 @@ function torii(scene: THREE.Scene, x: number, z: number, ry: number): void {
 
 function onionChurch(scene: THREE.Scene, x: number, z: number): void {
   const y = terrainHeight(x, z) - 0.4;
-  add(scene, new THREE.BoxGeometry(7, 8, 14), 0xdcd4c0, x, y + 4, z);
+  add(scene, new THREE.BoxGeometry(7, 8, 14), 0xbab09a, x, y + 4, z);
   const roof = new THREE.Shape();
   roof.moveTo(-4, 0);
   roof.lineTo(0, 3.5);
@@ -488,7 +488,7 @@ function onionChurch(scene: THREE.Scene, x: number, z: number): void {
   const rg = new THREE.ExtrudeGeometry(roof, { depth: 14, bevelEnabled: false });
   rg.translate(0, 0, -7);
   add(scene, rg, 0x8a3a24, x, y + 8, z);
-  add(scene, new THREE.BoxGeometry(3.6, 16, 3.6), 0xdcd4c0, x, y + 8, z - 8.5);
+  add(scene, new THREE.BoxGeometry(3.6, 16, 3.6), 0xbab09a, x, y + 8, z - 8.5);
   const dome = add(scene, new THREE.SphereGeometry(1.9, 16, 12), 0x3a5a48, x, y + 17.4, z - 8.5);
   dome.scale.set(1, 1.1, 1);
   add(scene, new THREE.ConeGeometry(1.1, 2.4, 16), 0x3a5a48, x, y + 19.8, z - 8.5);
@@ -498,11 +498,11 @@ function onionChurch(scene: THREE.Scene, x: number, z: number): void {
 
 function windmill(scene: THREE.Scene, x: number, z: number): THREE.Object3D {
   const y = terrainHeight(x, z) - 0.3;
-  add(scene, new THREE.CylinderGeometry(1.8, 2.6, 8, 12), 0xd8d0c0, x, y + 4, z);
+  add(scene, new THREE.CylinderGeometry(1.8, 2.6, 8, 12), 0xb8ae9a, x, y + 4, z);
   add(scene, new THREE.ConeGeometry(2.2, 2.4, 12), 0x5a4030, x, y + 9.2, z);
   const sails = new THREE.Group();
   for (let i = 0; i < 4; i++) {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 6, 0.08), m(0xe8e0d0));
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 6, 0.08), m(0xc4baa6));
     arm.position.y = 3.2;
     const holder = new THREE.Group();
     holder.rotation.z = (i * Math.PI) / 2;
@@ -517,9 +517,9 @@ function windmill(scene: THREE.Scene, x: number, z: number): THREE.Object3D {
 
 function chapel(scene: THREE.Scene, x: number, z: number): void {
   const y = terrainHeight(x, z) - 0.3;
-  add(scene, new THREE.BoxGeometry(3, 4, 5), 0xdcd6c8, x, y + 2, z);
+  add(scene, new THREE.BoxGeometry(3, 4, 5), 0xbcb4a2, x, y + 2, z);
   add(scene, new THREE.ConeGeometry(2.4, 2.6, 4), 0x8a3a24, x, y + 5.3, z, Math.PI / 4);
-  add(scene, new THREE.CylinderGeometry(0.8, 0.8, 3, 10), 0xdcd6c8, x, y + 5.5, z - 2);
+  add(scene, new THREE.CylinderGeometry(0.8, 0.8, 3, 10), 0xbcb4a2, x, y + 5.5, z - 2);
   add(scene, new THREE.SphereGeometry(0.9, 12, 10), 0x3a5a48, x, y + 7.5, z - 2);
 }
 
@@ -536,7 +536,7 @@ function buildMonuments(scene: THREE.Scene, era: EraId): THREE.Object3D[] {
       const x = -34 + (i % 13) * 5.4 + rng(i) * 1.5;
       const z = 42 + Math.floor(i / 13) * 8 + rng(i + 7) * 2;
       if (Math.abs(x + 6) < 10 && z > 48) continue;
-      house(scene, x, z, 3.6, 4.4, 4 + rng(i + 3) * 3, [0xe6dcc4, 0xd4c8a8, 0xc8b89a][i % 3], [0x6a3a2a, 0x4a4e58][i % 2], 0, 1.3);
+      house(scene, x, z, 3.6, 4.4, 4 + rng(i + 3) * 3, [0xc4b89c, 0xb4a686, 0xa89878][i % 3], [0x6a3a2a, 0x4a4e58][i % 2], 0, 1.3);
     }
     tower(scene, 30, 44, 12, true);
   } else if (era === "sekigahara") {
@@ -546,7 +546,7 @@ function buildMonuments(scene: THREE.Scene, era: EraId): THREE.Object3D[] {
     for (let i = 0; i < 5; i++) house(scene, -26 + i * 6, 46 + (i % 2) * 5, 5, 4, 2.6, 0x9a8a6a, 0x5a5040, 0.1, 0.5);
   } else if (era === "austerlitz") {
     onionChurch(scene, -22, 58);
-    for (let i = 0; i < 9; i++) house(scene, -40 + i * 5.5, 46 + (i % 3) * 3, 4, 5, 3, 0xdcd4c0, 0x9a3a24, 0.05 * i, 0.9);
+    for (let i = 0; i < 9; i++) house(scene, -40 + i * 5.5, 46 + (i % 3) * 3, 4, 5, 3, 0xbcb09a, 0x9a3a24, 0.05 * i, 0.9);
     spin.push(windmill(scene, 28, 50));
     chapel(scene, 44, 30);
   }
